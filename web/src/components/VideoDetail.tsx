@@ -49,13 +49,15 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
     }
   }
 
-  // Manual scrubbing cancels the auto-stop boundary so the user can watch freely.
-  function onSeeking(e: React.SyntheticEvent<HTMLVideoElement>) {
-    const v = e.currentTarget;
-    const until = playUntilRef.current;
-    if (until != null && (v.currentTime < (currentTime - 0.4) || v.currentTime > until + 0.1)) {
-      playUntilRef.current = null;
-      setActiveReel(null);
+  // Clear the auto-stop boundary only when the user presses play again after we paused,
+  // or starts dragging the native scrubber (mousedown on the controls) — handled via onPlay below.
+  function onManualPlay() {
+    if (videoRef.current && playUntilRef.current != null) {
+      // If playback resumes at/after the boundary, the user wants to keep watching.
+      if (videoRef.current.currentTime >= playUntilRef.current - 0.05) {
+        playUntilRef.current = null;
+        setActiveReel(null);
+      }
     }
   }
 
@@ -86,7 +88,7 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
               controls
               className="aspect-video w-full bg-black"
               onTimeUpdate={onTimeUpdate}
-              onSeeking={onSeeking}
+              onPlay={onManualPlay}
             />
           </div>
 
