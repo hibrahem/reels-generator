@@ -45,6 +45,9 @@ def _style(settings) -> CaptionStyle:
         shadow=c.shadow,
         play_res_x=settings.output.width,
         play_res_y=settings.output.height,
+        bold=c.bold,
+        box=c.box,
+        box_color=c.box_color,
     )
 
 

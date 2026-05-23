@@ -10,7 +10,7 @@ paths:
   intro: null                 # optional path to an intro clip (mp4) — wired at brand stage
   outro: null                 # optional path to an outro clip (mp4)
   logo: null                  # optional path to a logo overlay (png with alpha)
-  font: ./assets/fonts/Amiri-Regular.ttf  # Arabic-capable font for caption burn-in
+  font: ./assets/fonts/Almarai-Bold.ttf  # bold modern sans-serif Arabic for caption burn-in
   ffmpeg: ./vendor/ffmpeg/bin/ffmpeg  # libass-enabled ffmpeg (system brew build lacks libass)
 
 transcription:
@@ -40,20 +40,20 @@ layout:
   presenter_anchor: right     # source layout: presenter on the right side of the frame
 
 captions:
-  font_family: Amiri        # must match the family name of paths.font
-  base_font_size: 88
-  active_font_size: 96
-  base_color: "&H00FFFFFF"    # libass BGR+alpha — white (unsung word)
-  active_color: "&H0000D7FF"  # amber highlight for the spoken word
+  font_family: Almarai      # must match the family name of paths.font
+  base_font_size: 100
+  active_font_size: 108
+  base_color: "&H00FFFFFF"    # white (unsung word)
+  active_color: "&H00FFFFFF"  # white too — uniform look like the reference (set a colour for a pop)
   position: bottom            # bottom | center
-  safe_margin_v: 260          # px from bottom edge so platform UI doesn't cover captions
-  safe_margin_h: 80           # px from left/right edges
-  max_words_per_line: 4
-  outline: 3
-  shadow: 0
+  safe_margin_v: 320          # px from bottom edge (sits in the lower third)
+  safe_margin_h: 70           # px from left/right edges
+  max_words_per_line: 3
+  outline: 5                  # black outline so white text reads on any background
+  shadow: 3                   # soft drop shadow
   bold: true
-  box: true                   # translucent background box behind captions
-  box_color: "&H90000000"     # AABBGGRR — ~56% opaque black
+  box: false                  # no background box (clean look like the reference)
+  box_color: "&H90000000"     # AABBGGRR — used only when box: true
 
 output:
   width: 1080
