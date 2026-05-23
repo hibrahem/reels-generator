@@ -7,8 +7,10 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from reels.application.queries.video_queries import ListVideos
+from reels.application.use_cases.reel_editing import DeleteReel, EditReel, ReelNotFound
 from reels.presentation.api.schemas import VideoDetailOut, VideoSummaryOut
 from reels.presentation.api.state import AppState, get_state
 
@@ -44,6 +46,43 @@ def get_video(video_id: str, state: StateDep) -> VideoDetailOut:
     manifest = c.manifests.load(video_id)
     if manifest is None:
         raise HTTPException(status_code=404, detail=f"video '{video_id}' not found (not ingested?)")
+    return VideoDetailOut.of(manifest, c.settings.paths.output_dir)
+
+
+class ReelEdit(BaseModel):
+    start: float | None = None
+    end: float | None = None
+    title: str | None = None
+    hook: str | None = None
+    caption: str | None = None
+
+
+@router.patch("/videos/{video_id}/reels/{index}", response_model=VideoDetailOut)
+def edit_reel(video_id: str, index: int, edit: ReelEdit, state: StateDep) -> VideoDetailOut:
+    c = state.container
+    manifest = c.manifests.load(video_id)
+    if manifest is None:
+        raise HTTPException(status_code=404, detail="video not found")
+    try:
+        EditReel(manifests=c.manifests, transcripts=c.transcripts).execute(
+            manifest, index, start=edit.start, end=edit.end, title=edit.title,
+            hook=edit.hook, caption=edit.caption,
+        )
+    except ReelNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return VideoDetailOut.of(manifest, c.settings.paths.output_dir)
+
+
+@router.delete("/videos/{video_id}/reels/{index}", response_model=VideoDetailOut)
+def delete_reel(video_id: str, index: int, state: StateDep) -> VideoDetailOut:
+    c = state.container
+    manifest = c.manifests.load(video_id)
+    if manifest is None:
+        raise HTTPException(status_code=404, detail="video not found")
+    try:
+        DeleteReel(manifests=c.manifests).execute(manifest, index)
+    except ReelNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return VideoDetailOut.of(manifest, c.settings.paths.output_dir)
 
 

@@ -99,6 +99,17 @@ export const api = {
     }),
   makePreview: (id: string) =>
     http<{ job_id: string }>(`/videos/${encodeURIComponent(id)}/preview`, { method: "POST" }),
+  editReel: (
+    id: string,
+    index: number,
+    edit: Partial<{ start: number; end: number; title: string; hook: string; caption: string }>,
+  ) =>
+    http<VideoDetail>(`/videos/${encodeURIComponent(id)}/reels/${index}`, {
+      method: "PATCH",
+      body: JSON.stringify(edit),
+    }),
+  deleteReel: (id: string, index: number) =>
+    http<VideoDetail>(`/videos/${encodeURIComponent(id)}/reels/${index}`, { method: "DELETE" }),
 };
 
 export type JobEvent = { stage: string; source_id: string; message: string; ts: number };
