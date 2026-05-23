@@ -1,16 +1,21 @@
 import { useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api, fmtClock, mediaUrl, type Reel } from "../lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, fmtClock, mediaUrl, STAGES, type Reel } from "../lib/api";
 import { ReelCard } from "./ReelCard";
 import { TranscriptView } from "./TranscriptView";
+import { JobProgress } from "./JobProgress";
 
 export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) {
+  const qc = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const playUntilRef = useRef<number | null>(null); // auto-stop boundary for "Play span"
   const [currentTime, setCurrentTime] = useState(0);
   const [activeReel, setActiveReel] = useState<number | null>(null);
   const [loopSpan, setLoopSpan] = useState(false);
   const [bottomTab, setBottomTab] = useState<"transcript" | "summary">("transcript");
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [fromStage, setFromStage] = useState("plan-layout");
+  const [toStage, setToStage] = useState("package");
 
   const detail = useQuery({ queryKey: ["video", id], queryFn: () => api.getVideo(id) });
   const transcript = useQuery({
@@ -61,6 +66,17 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
     }
   }
 
+  async function start(promise: Promise<{ job_id: string }>) {
+    const { job_id } = await promise;
+    setJobId(job_id);
+  }
+
+  function onJobDone() {
+    void qc.invalidateQueries({ queryKey: ["video", id] });
+    void qc.invalidateQueries({ queryKey: ["transcript", id] });
+    void qc.invalidateQueries({ queryKey: ["videos"] });
+  }
+
   if (detail.isLoading) return <p className="text-zinc-400">Loading…</p>;
   if (detail.error) return <p className="text-red-400">Failed: {String(detail.error)}</p>;
   const d = detail.data!;
@@ -77,6 +93,58 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
           {d.reels.length} reels
         </span>
       </div>
+
+      {/* Pipeline controls */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+        <span className="text-sm text-zinc-400">Run</span>
+        <select
+          value={fromStage}
+          onChange={(e) => setFromStage(e.target.value)}
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200"
+        >
+          {STAGES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <span className="text-sm text-zinc-500">→</span>
+        <select
+          value={toStage}
+          onChange={(e) => setToStage(e.target.value)}
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200"
+        >
+          {STAGES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <button
+          onClick={() => start(api.runPipeline(id, { from_stage: fromStage, to_stage: toStage }))}
+          className="rounded-lg bg-indigo-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-indigo-500"
+        >
+          Run
+        </button>
+        <div className="mx-1 h-5 w-px bg-zinc-700" />
+        <button
+          onClick={() =>
+            start(api.runPipeline(id, { from_stage: "plan-layout", to_stage: "package" }))
+          }
+          className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition hover:bg-zinc-700"
+        >
+          Process all reels
+        </button>
+        <button
+          onClick={() => start(api.makePreview(id))}
+          className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition hover:bg-zinc-700"
+          title="Transcode a browser-friendly preview (audio in Chrome)"
+        >
+          Generate preview
+        </button>
+      </div>
+
+      {jobId && (
+        <div className="mb-4">
+          <JobProgress jobId={jobId} onDone={onJobDone} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Player + bottom tabs */}
@@ -161,6 +229,7 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
                 reel={r}
                 active={activeReel === r.index}
                 onPlaySpan={() => playReel(r)}
+                onProcess={() => start(api.runReel(id, r.index))}
               />
             ))}
           </div>

@@ -73,6 +73,7 @@ class PipelineOrchestrator:
         to_stage: Stage = Stage.PACKAGE,
         on_progress: Callable[[PipelineProgress], None] | None = None,
         options: RunOptions | None = None,
+        video_ids: set[str] | None = None,
     ) -> list[Manifest]:
         report = on_progress or (lambda _: None)
         options = options or RunOptions()
@@ -88,6 +89,9 @@ class PipelineOrchestrator:
                     f"--from {from_stage.value} needs existing manifests; none found. "
                     "Run ingest first."
                 )
+
+        if video_ids is not None:
+            manifests = [m for m in manifests if m.source.id.value in video_ids]
 
         per_video = [s for s in stages_between(from_stage, to_stage) if s is not Stage.INGEST]
         for manifest in manifests:

@@ -29,10 +29,11 @@ def create_app(config_path: Path) -> FastAPI:
         allow_headers=["*"],
     )
 
-    from .routers import system, videos
+    from .routers import jobs, system, videos
 
     app.include_router(system.router, prefix="/api", tags=["system"])
     app.include_router(videos.router, prefix="/api", tags=["videos"])
+    app.include_router(jobs.router, prefix="/api", tags=["jobs"])
 
     # Serve the built SPA if present (prod/local single-process mode).
     if _SPA_DIST.exists():

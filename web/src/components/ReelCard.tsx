@@ -14,11 +14,13 @@ export function ReelCard({
   reel,
   active,
   onPlaySpan,
+  onProcess,
 }: {
   videoId: string;
   reel: Reel;
   active: boolean;
   onPlaySpan: () => void;
+  onProcess: () => void;
 }) {
   const [showFinished, setShowFinished] = useState(false);
   const packaged = reel.stages.package;
@@ -79,6 +81,13 @@ export function ReelCard({
           className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700"
         >
           ▶ Play span
+        </button>
+        <button
+          onClick={onProcess}
+          className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700"
+          title="Render this reel (plan-layout → package)"
+        >
+          ⚙ Process
         </button>
         {packaged && (
           <button

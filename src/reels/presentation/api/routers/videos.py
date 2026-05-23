@@ -60,6 +60,10 @@ def get_media(video_id: str, state: StateDep) -> FileResponse:
     manifest = state.container.manifests.load(video_id)
     if manifest is None or not manifest.source.path.exists():
         raise HTTPException(status_code=404, detail="source video not found")
+    # Prefer the browser-friendly preview proxy (H.264+AAC) if it's been generated.
+    preview = manifest.source.working_dir / "preview.mp4"
+    if preview.exists():
+        return FileResponse(preview, media_type="video/mp4")
     # FileResponse honors the Range header (206), so the player can seek.
     return FileResponse(manifest.source.path, media_type=_video_mime(manifest.source.path.suffix))
 

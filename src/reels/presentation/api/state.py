@@ -6,15 +6,17 @@ from pathlib import Path
 
 from fastapi import Request
 
+from reels.presentation.api.jobs import JobManager
 from reels.presentation.container import Container
 
 
 class AppState:
-    """Holds the active config path and a cached Container, rebuilt when config changes."""
+    """Holds the active config path, a cached Container, and the background JobManager."""
 
     def __init__(self, config_path: Path) -> None:
         self.config_path = config_path
         self._container: Container | None = None
+        self.jobs = JobManager()
 
     @property
     def container(self) -> Container:

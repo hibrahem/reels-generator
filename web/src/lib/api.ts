@@ -84,7 +84,45 @@ export const api = {
   getTranscript: (id: string) => http<Transcript>(`/videos/${encodeURIComponent(id)}/transcript`),
   doctor: () => http<Doctor>("/doctor"),
   getConfig: () => http<{ config: Record<string, unknown>; schema: unknown }>("/config"),
+
+  runPipeline: (
+    id: string,
+    body: { from_stage: string; to_stage: string; reel_indices?: number[] },
+  ) =>
+    http<{ job_id: string }>(`/videos/${encodeURIComponent(id)}/run`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  runReel: (id: string, index: number) =>
+    http<{ job_id: string }>(`/videos/${encodeURIComponent(id)}/reels/${index}/run`, {
+      method: "POST",
+    }),
+  makePreview: (id: string) =>
+    http<{ job_id: string }>(`/videos/${encodeURIComponent(id)}/preview`, { method: "POST" }),
 };
+
+export type JobEvent = { stage: string; source_id: string; message: string; ts: number };
+
+// Subscribe to a job's live progress via SSE. Returns a cleanup function.
+export function subscribeJob(
+  jobId: string,
+  handlers: {
+    onProgress: (e: JobEvent) => void;
+    onEnd: (state: string, error: string | null) => void;
+  },
+): () => void {
+  const es = new EventSource(`/api/jobs/${jobId}/events`);
+  es.addEventListener("progress", (e) =>
+    handlers.onProgress(JSON.parse((e as MessageEvent).data)),
+  );
+  es.addEventListener("end", (e) => {
+    const d = JSON.parse((e as MessageEvent).data);
+    handlers.onEnd(d.state, d.error);
+    es.close();
+  });
+  es.onerror = () => es.close();
+  return () => es.close();
+}
 
 export const mediaUrl = (id: string) => `/api/videos/${encodeURIComponent(id)}/media`;
 export const reelMediaUrl = (id: string, index: number) =>
