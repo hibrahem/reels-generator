@@ -6,8 +6,10 @@ import { TranscriptView } from "./TranscriptView";
 
 export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playUntilRef = useRef<number | null>(null); // auto-stop boundary for "Play span"
   const [currentTime, setCurrentTime] = useState(0);
   const [activeReel, setActiveReel] = useState<number | null>(null);
+  const [loopSpan, setLoopSpan] = useState(false);
   const [bottomTab, setBottomTab] = useState<"transcript" | "summary">("transcript");
 
   const detail = useQuery({ queryKey: ["video", id], queryFn: () => api.getVideo(id) });
@@ -26,7 +28,35 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
 
   function playReel(reel: Reel) {
     setActiveReel(reel.index);
+    playUntilRef.current = reel.end; // stop at the reel's end to simulate the finished clip
     seekTo(reel.start);
+  }
+
+  function onTimeUpdate(e: React.SyntheticEvent<HTMLVideoElement>) {
+    const v = e.currentTarget;
+    setCurrentTime(v.currentTime);
+    const until = playUntilRef.current;
+    if (until != null && v.currentTime >= until) {
+      if (loopSpan && activeReel != null) {
+        const reel = detail.data?.reels.find((r) => r.index === activeReel);
+        if (reel) {
+          v.currentTime = reel.start; // restart the span
+          return;
+        }
+      }
+      v.pause();
+      playUntilRef.current = null;
+    }
+  }
+
+  // Manual scrubbing cancels the auto-stop boundary so the user can watch freely.
+  function onSeeking(e: React.SyntheticEvent<HTMLVideoElement>) {
+    const v = e.currentTarget;
+    const until = playUntilRef.current;
+    if (until != null && (v.currentTime < (currentTime - 0.4) || v.currentTime > until + 0.1)) {
+      playUntilRef.current = null;
+      setActiveReel(null);
+    }
   }
 
   if (detail.isLoading) return <p className="text-zinc-400">Loading…</p>;
@@ -55,9 +85,20 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
               src={mediaUrl(id)}
               controls
               className="aspect-video w-full bg-black"
-              onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+              onTimeUpdate={onTimeUpdate}
+              onSeeking={onSeeking}
             />
           </div>
+
+          <label className="mt-2 flex items-center gap-2 text-sm text-zinc-400">
+            <input
+              type="checkbox"
+              checked={loopSpan}
+              onChange={(e) => setLoopSpan(e.target.checked)}
+              className="accent-indigo-500"
+            />
+            Loop the played span
+          </label>
 
           <div className="mt-4 flex gap-1">
             {(["transcript", "summary"] as const).map((t) => (
