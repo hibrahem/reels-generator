@@ -1,0 +1,250 @@
+import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, fmtClock, mediaUrl, STAGES, type Reel } from "../lib/api";
+import { ReelCard } from "./ReelCard";
+import { TranscriptView } from "./TranscriptView";
+import { JobProgress } from "./JobProgress";
+import { Timeline } from "./Timeline";
+
+export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) {
+  const qc = useQueryClient();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playUntilRef = useRef<number | null>(null); // auto-stop boundary for "Play span"
+  const [currentTime, setCurrentTime] = useState(0);
+  const [activeReel, setActiveReel] = useState<number | null>(null);
+  const [loopSpan, setLoopSpan] = useState(false);
+  const [bottomTab, setBottomTab] = useState<"transcript" | "summary">("transcript");
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [fromStage, setFromStage] = useState("plan-layout");
+  const [toStage, setToStage] = useState("package");
+
+  const detail = useQuery({ queryKey: ["video", id], queryFn: () => api.getVideo(id) });
+  const transcript = useQuery({
+    queryKey: ["transcript", id],
+    queryFn: () => api.getTranscript(id),
+    retry: false,
+  });
+
+  function seekTo(t: number, play = true) {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = t;
+    if (play) void v.play();
+  }
+
+  function playReel(reel: Reel) {
+    setActiveReel(reel.index);
+    playUntilRef.current = reel.end; // stop at the reel's end to simulate the finished clip
+    seekTo(reel.start);
+  }
+
+  function onTimeUpdate(e: React.SyntheticEvent<HTMLVideoElement>) {
+    const v = e.currentTarget;
+    setCurrentTime(v.currentTime);
+    const until = playUntilRef.current;
+    if (until != null && v.currentTime >= until) {
+      if (loopSpan && activeReel != null) {
+        const reel = detail.data?.reels.find((r) => r.index === activeReel);
+        if (reel) {
+          v.currentTime = reel.start; // restart the span
+          return;
+        }
+      }
+      v.pause();
+      playUntilRef.current = null;
+    }
+  }
+
+  // Clear the auto-stop boundary only when the user presses play again after we paused,
+  // or starts dragging the native scrubber (mousedown on the controls) — handled via onPlay below.
+  function onManualPlay() {
+    if (videoRef.current && playUntilRef.current != null) {
+      // If playback resumes at/after the boundary, the user wants to keep watching.
+      if (videoRef.current.currentTime >= playUntilRef.current - 0.05) {
+        playUntilRef.current = null;
+        setActiveReel(null);
+      }
+    }
+  }
+
+  async function start(promise: Promise<{ job_id: string }>) {
+    const { job_id } = await promise;
+    setJobId(job_id);
+  }
+
+  function onJobDone() {
+    void qc.invalidateQueries({ queryKey: ["video", id] });
+    void qc.invalidateQueries({ queryKey: ["transcript", id] });
+    void qc.invalidateQueries({ queryKey: ["videos"] });
+  }
+
+  if (detail.isLoading) return <p className="text-zinc-400">Loading…</p>;
+  if (detail.error) return <p className="text-red-400">Failed: {String(detail.error)}</p>;
+  const d = detail.data!;
+
+  return (
+    <div>
+      <button onClick={onBack} className="mb-3 text-sm text-indigo-400 hover:text-indigo-300">
+        ← Library
+      </button>
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h2 className="text-lg font-semibold text-zinc-100">{d.filename}</h2>
+        <span className="text-sm text-zinc-400">
+          {d.width}×{d.height} · {d.fps?.toFixed(0)}fps · {fmtClock(d.duration_seconds ?? 0)} ·{" "}
+          {d.reels.length} reels
+        </span>
+      </div>
+
+      {/* Pipeline controls */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+        <span className="text-sm text-zinc-400">Run</span>
+        <select
+          value={fromStage}
+          onChange={(e) => setFromStage(e.target.value)}
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200"
+        >
+          {STAGES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <span className="text-sm text-zinc-500">→</span>
+        <select
+          value={toStage}
+          onChange={(e) => setToStage(e.target.value)}
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200"
+        >
+          {STAGES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <button
+          onClick={() => start(api.runPipeline(id, { from_stage: fromStage, to_stage: toStage }))}
+          className="rounded-lg bg-indigo-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-indigo-500"
+        >
+          Run
+        </button>
+        <div className="mx-1 h-5 w-px bg-zinc-700" />
+        <button
+          onClick={() =>
+            start(api.runPipeline(id, { from_stage: "plan-layout", to_stage: "package" }))
+          }
+          className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition hover:bg-zinc-700"
+        >
+          Process all reels
+        </button>
+        <button
+          onClick={() => start(api.makePreview(id))}
+          className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition hover:bg-zinc-700"
+          title="Transcode a browser-friendly preview (audio in Chrome)"
+        >
+          Generate preview
+        </button>
+      </div>
+
+      {jobId && (
+        <div className="mb-4">
+          <JobProgress jobId={jobId} onDone={onJobDone} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Player + bottom tabs */}
+        <div className="min-w-0">
+          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-black">
+            <video
+              ref={videoRef}
+              src={mediaUrl(id)}
+              controls
+              className="aspect-video w-full bg-black"
+              onTimeUpdate={onTimeUpdate}
+              onPlay={onManualPlay}
+            />
+          </div>
+
+          <Timeline
+            reels={d.reels}
+            duration={d.duration_seconds ?? 0}
+            currentTime={currentTime}
+            activeReel={activeReel}
+            onPlayReel={playReel}
+            onSeek={(t) => seekTo(t, false)}
+          />
+
+          <label className="mt-2 flex items-center gap-2 text-sm text-zinc-400">
+            <input
+              type="checkbox"
+              checked={loopSpan}
+              onChange={(e) => setLoopSpan(e.target.checked)}
+              className="accent-indigo-500"
+            />
+            Loop the played span
+          </label>
+
+          <div className="mt-4 flex gap-1">
+            {(["transcript", "summary"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setBottomTab(t)}
+                className={`rounded-lg px-3 py-1.5 text-sm capitalize transition ${
+                  bottomTab === t ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3">
+            {bottomTab === "transcript" &&
+              (transcript.data ? (
+                <TranscriptView
+                  segments={transcript.data.segments}
+                  currentTime={currentTime}
+                  onSeek={(t) => seekTo(t)}
+                />
+              ) : (
+                <p className="text-sm text-zinc-500">No transcript yet — run the transcribe stage.</p>
+              ))}
+            {bottomTab === "summary" && (
+              <div className="space-y-2 text-sm text-zinc-300">
+                <p>Stages done: {d.completed_stages.join(", ") || "—"}</p>
+                {d.warnings.length > 0 && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                    <p className="mb-1 font-medium text-amber-300">{d.warnings.length} warnings</p>
+                    <ul className="list-inside list-disc text-amber-200/80">
+                      {d.warnings.slice(0, 12).map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Reels panel */}
+        <div className="min-w-0">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+            Reels ({d.reels.length})
+          </h3>
+          <div className="flex flex-col gap-3">
+            {d.reels.length === 0 && (
+              <p className="text-sm text-zinc-500">No reels selected yet — run the select stage.</p>
+            )}
+            {d.reels.map((r) => (
+              <ReelCard
+                key={r.index}
+                videoId={id}
+                reel={r}
+                active={activeReel === r.index}
+                onPlaySpan={() => playReel(r)}
+                onProcess={() => start(api.runReel(id, r.index))}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

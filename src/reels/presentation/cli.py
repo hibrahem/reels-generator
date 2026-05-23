@@ -131,6 +131,25 @@ def doctor(
     console.print(table)
 
 
+@app.command()
+def web(
+    config: Annotated[Path, typer.Option(help="Path to config.yaml.")] = DEFAULT_CONFIG,
+    host: Annotated[str, typer.Option(help="Bind host.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Bind port.")] = 8000,
+) -> None:
+    """Launch the Reels Studio web app (requires the 'web' extra: uv sync --extra web)."""
+    try:
+        import uvicorn
+
+        from reels.presentation.api.app import create_app
+    except ImportError as exc:
+        console.print("[red]✗ web dependencies missing. Install with: uv sync --extra web")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"[green]Reels Studio →[/green] http://{host}:{port}")
+    uvicorn.run(create_app(config.resolve()), host=host, port=port)
+
+
 # --- helpers -----------------------------------------------------------------------------------
 
 

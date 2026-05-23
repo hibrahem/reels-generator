@@ -60,12 +60,15 @@ class ResolvedProvider:
 
 @dataclass(slots=True)
 class Container:
-    """Holds the wired settings and the objects the CLI drives."""
+    """Holds the wired settings and the objects the CLI/API drive."""
 
     settings: Settings
     orchestrator: PipelineOrchestrator
     media_environment: FFmpegMediaEnvironment
     provider: ResolvedProvider
+    manifests: JsonManifestRepository
+    library: FilesystemVideoLibrary
+    transcripts: JsonTranscriptRepository
 
     @classmethod
     def from_config(cls, config_path: Path) -> Container:
@@ -172,6 +175,9 @@ class Container:
             orchestrator=orchestrator,
             media_environment=FFmpegMediaEnvironment(ffmpeg_path=ffmpeg_path),
             provider=provider,
+            manifests=manifests,
+            library=library,
+            transcripts=transcripts,
         )
 
 
