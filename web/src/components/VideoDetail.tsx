@@ -4,6 +4,7 @@ import { api, fmtClock, mediaUrl, STAGES, type Reel } from "../lib/api";
 import { ReelCard } from "./ReelCard";
 import { TranscriptView } from "./TranscriptView";
 import { JobProgress } from "./JobProgress";
+import { Timeline } from "./Timeline";
 
 export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const qc = useQueryClient();
@@ -159,6 +160,15 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
               onPlay={onManualPlay}
             />
           </div>
+
+          <Timeline
+            reels={d.reels}
+            duration={d.duration_seconds ?? 0}
+            currentTime={currentTime}
+            activeReel={activeReel}
+            onPlayReel={playReel}
+            onSeek={(t) => seekTo(t, false)}
+          />
 
           <label className="mt-2 flex items-center gap-2 text-sm text-zinc-400">
             <input
