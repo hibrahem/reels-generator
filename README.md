@@ -105,7 +105,7 @@ Built in thin slices per spec §10, stopping at each human checkpoint:
 - [x] **Slice 2** — Select (LLM clip selection; DeepSeek/OpenAI/Claude; validated + reconciled).
 - [x] **Slice 3** — Cut + MODE A reframe (OpenCV presenter detection → 9:16 presenter crop; `--reel` filter).
 - [x] **Slice 4** — Arabic captions (word-by-word `{\k}` karaoke via libass; shaping/bidi/code-switch verified by the harness).
-- [ ] Slice 5 — Brand + package.
+- [x] **Slice 5** — Brand (intro/outro concat + logo overlay) + package (`{source}__NN__{slug}.mp4` + `reels.json`/`reels.md`).
 - [ ] Slice 6 — Loop over clips.
 - [ ] Slice 7 — Loop over folder.
 - [ ] Slice 8 — MODE B (stacked slides + presenter).

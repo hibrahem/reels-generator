@@ -13,10 +13,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from reels.application.pipeline import PipelineOrchestrator
-from reels.application.ports.video_editor import RenderSpec
+from reels.application.ports.video_editor import LogoOverlay, RenderSpec
+from reels.application.use_cases.brand_reels import BrandReels
 from reels.application.use_cases.caption_clips import CaptionClips
 from reels.application.use_cases.cut_clips import CutClips
 from reels.application.use_cases.ingest_videos import IngestVideos
+from reels.application.use_cases.package_reels import PackageReels
 from reels.application.use_cases.plan_layout import PlanLayout
 from reels.application.use_cases.reframe_clips import ReframeClips
 from reels.application.use_cases.select_clips import SelectClips
@@ -36,6 +38,7 @@ from reels.infrastructure.ffmpeg.ffprobe_video_prober import FFprobeVideoProber
 from reels.infrastructure.llm.errors import SelectionUnavailable
 from reels.infrastructure.llm.lazy import LazyClipSelector
 from reels.infrastructure.llm.provider_profiles import PROVIDER_PROFILES, ProviderProfile
+from reels.infrastructure.persistence.file_sidecar_writer import FileSidecarWriter
 from reels.infrastructure.persistence.filesystem_video_library import FilesystemVideoLibrary
 from reels.infrastructure.persistence.json_manifest_repository import JsonManifestRepository
 from reels.infrastructure.persistence.json_transcript_repository import JsonTranscriptRepository
@@ -132,6 +135,18 @@ class Container:
         caption = CaptionClips(
             transcripts=transcripts, renderer=caption_renderer, manifests=manifests
         )
+        brand = BrandReels(
+            editor=editor,
+            manifests=manifests,
+            intro=settings.paths.intro,
+            outro=settings.paths.outro,
+            logo=_logo_overlay(settings),
+        )
+        package = PackageReels(
+            sidecars=FileSidecarWriter(),
+            manifests=manifests,
+            output_dir=settings.paths.output_dir,
+        )
 
         orchestrator = PipelineOrchestrator(
             ingest=ingest,
@@ -141,6 +156,8 @@ class Container:
             cut=cut,
             reframe=reframe,
             caption=caption,
+            brand=brand,
+            package=package,
             manifests=manifests,
         )
         return cls(
@@ -164,6 +181,17 @@ def _resolve_provider(settings: Settings) -> ResolvedProvider:
         base_url=base_url,
         key_env=key_env,
         openai_compatible=profile.openai_compatible,
+    )
+
+
+def _logo_overlay(settings: Settings) -> LogoOverlay | None:
+    if settings.paths.logo is None:
+        return None
+    return LogoOverlay(
+        path=settings.paths.logo,
+        position=settings.brand.logo_position,
+        opacity=settings.brand.logo_opacity,
+        width_ratio=settings.brand.logo_width_ratio,
     )
 
 

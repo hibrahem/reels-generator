@@ -22,6 +22,16 @@ class RenderSpec:
     faststart: bool = True
 
 
+@dataclass(frozen=True, slots=True)
+class LogoOverlay:
+    """A logo to composite onto the clip (spec §5.8)."""
+
+    path: Path
+    position: str = "bottom-right"  # bottom-right|bottom-left|top-right|top-left|bottom-center
+    opacity: float = 1.0
+    width_ratio: float = 0.18  # logo width as a fraction of the video width
+
+
 class VideoEditor(ABC):
     @abstractmethod
     def cut(self, source_path: Path, time_range: TimeRange, out_path: Path) -> None:
@@ -31,4 +41,17 @@ class VideoEditor(ABC):
     @abstractmethod
     def reframe(self, in_path: Path, layout: LayoutPlan, out_path: Path) -> None:
         """Apply the layout geometry, producing a vertical clip at the render resolution (§5.6)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def brand(
+        self,
+        in_path: Path,
+        out_path: Path,
+        *,
+        intro: Path | None = None,
+        outro: Path | None = None,
+        logo: LogoOverlay | None = None,
+    ) -> None:
+        """Prepend intro, append outro, overlay logo, normalized to the render spec (§5.8)."""
         raise NotImplementedError

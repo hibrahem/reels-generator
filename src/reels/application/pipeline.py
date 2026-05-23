@@ -15,9 +15,11 @@ from .manifest import Manifest
 from .pipeline_stage import Stage, stages_between
 from .ports.manifest_repository import ManifestRepository
 from .run_options import RunOptions
+from .use_cases.brand_reels import BrandReels
 from .use_cases.caption_clips import CaptionClips
 from .use_cases.cut_clips import CutClips
 from .use_cases.ingest_videos import IngestVideos
+from .use_cases.package_reels import PackageReels
 from .use_cases.plan_layout import PlanLayout
 from .use_cases.reframe_clips import ReframeClips
 from .use_cases.select_clips import SelectClips
@@ -49,6 +51,8 @@ class PipelineOrchestrator:
     cut: CutClips
     reframe: ReframeClips
     caption: CaptionClips
+    brand: BrandReels
+    package: PackageReels
     manifests: ManifestRepository
     _handlers: dict[Stage, StageHandler] = field(init=False, default_factory=dict)
 
@@ -60,6 +64,8 @@ class PipelineOrchestrator:
         self._handlers[Stage.CUT] = self.cut.execute
         self._handlers[Stage.REFRAME] = self.reframe.execute
         self._handlers[Stage.CAPTION] = self.caption.execute
+        self._handlers[Stage.BRAND] = self.brand.execute
+        self._handlers[Stage.PACKAGE] = self.package.execute
 
     def run(
         self,

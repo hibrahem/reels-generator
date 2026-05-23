@@ -70,6 +70,14 @@ class CaptionsConfig(BaseModel):
     box_color: str = "&H90000000"  # box colour (AABBGGRR; AA=90 ≈ 56% opaque black)
 
 
+class BrandConfig(BaseModel):
+    logo_position: Literal[
+        "bottom-right", "bottom-left", "top-right", "top-left", "bottom-center"
+    ] = "bottom-right"
+    logo_opacity: float = Field(default=1.0, ge=0.0, le=1.0)
+    logo_width_ratio: float = Field(default=0.18, gt=0.0, le=1.0)
+
+
 class OutputConfig(BaseModel):
     width: int = 1080
     height: int = 1920
@@ -86,6 +94,7 @@ class Settings(BaseModel):
     selection: SelectionConfig = SelectionConfig()
     layout: LayoutConfig = LayoutConfig()
     captions: CaptionsConfig = CaptionsConfig()
+    brand: BrandConfig = BrandConfig()
     output: OutputConfig = OutputConfig()
 
 

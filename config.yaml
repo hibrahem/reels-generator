@@ -55,6 +55,12 @@ captions:
   box: false                  # no background box (clean look like the reference)
   box_color: "&H90000000"     # AABBGGRR — used only when box: true
 
+brand:
+  logo_position: bottom-right   # bottom-right|bottom-left|top-right|top-left|bottom-center
+  logo_opacity: 1.0
+  logo_width_ratio: 0.18        # logo width as a fraction of the 1080px frame
+  # intro/outro/logo file paths live under paths: above (null = skipped)
+
 output:
   width: 1080
   height: 1920
