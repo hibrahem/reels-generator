@@ -33,8 +33,12 @@ class TranscriptionConfig(BaseModel):
 
 
 class SelectionConfig(BaseModel):
-    provider: Literal["openai", "claude"] = "openai"
+    # 'deepseek' and 'openai' share one OpenAI-compatible adapter (they differ only by base_url
+    # and which env var holds the key). 'claude' uses the Anthropic SDK.
+    provider: Literal["openai", "deepseek", "claude"] = "openai"
     model: str = "gpt-4o"
+    base_url: str | None = None  # override the API endpoint (OpenAI-compatible providers)
+    api_key_env: str | None = None  # override which env var holds the key
     temperature: float = 0.2
     min_clip_seconds: float = 20.0
     max_clip_seconds: float = 90.0

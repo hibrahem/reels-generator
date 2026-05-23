@@ -57,10 +57,23 @@ src/reels/
 ```bash
 uv sync                       # creates .venv and installs everything
 
-# Provide your LLM key (only transcript text is sent):
-export OPENAI_API_KEY=sk-...        # default provider
-# or: export ANTHROPIC_API_KEY=sk-ant-...   (set selection.provider: claude in config.yaml)
+# Provide your LLM key via a .env file (only transcript TEXT is ever sent):
+cp .env.example .env          # then edit .env and fill in your key
 ```
+
+### Selection provider (clip selection stage)
+
+Set `selection.provider` in `config.yaml`. DeepSeek and OpenAI share one adapter (they're
+OpenAI-API-compatible — they differ only by `base_url` and key), so switching is config-only:
+
+| provider | key env (in `.env`) | default model | notes |
+|---|---|---|---|
+| `deepseek` (default) | `DEEPSEEK_API_KEY` | `deepseek-chat` | OpenAI-compatible; `base_url=https://api.deepseek.com` |
+| `openai` | `OPENAI_API_KEY` | `gpt-4o` | OpenAI-compatible |
+| `claude` | `ANTHROPIC_API_KEY` | `claude-sonnet-4-6` | Anthropic SDK |
+
+The exact model id is whatever your account exposes — set `selection.model` (or `REELS_SELECTION_MODEL`
+in `.env`). You can also override the endpoint via `selection.base_url` / `REELS_SELECTION_BASE_URL`.
 
 ## Usage
 
@@ -85,7 +98,7 @@ Configuration lives in [`config.yaml`](./config.yaml) (see spec §7). Secrets ar
 Built in thin slices per spec §10, stopping at each human checkpoint:
 
 - [x] **Slice 1** — Skeleton + ingest + transcribe (word-level transcript JSON).
-- [ ] Slice 2 — Select (LLM clip selection, validated).
+- [x] **Slice 2** — Select (LLM clip selection; DeepSeek/OpenAI/Claude; validated + reconciled).
 - [ ] Slice 3 — Cut + MODE A reframe.
 - [ ] Slice 4 — Arabic captions (the gate).
 - [ ] Slice 5 — Brand + package.

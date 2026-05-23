@@ -15,6 +15,7 @@ from .manifest import Manifest
 from .pipeline_stage import Stage, stages_between
 from .ports.manifest_repository import ManifestRepository
 from .use_cases.ingest_videos import IngestVideos
+from .use_cases.select_clips import SelectClips
 from .use_cases.transcribe_video import TranscribeVideo
 
 # A per-video stage handler advances one manifest by one stage.
@@ -38,12 +39,14 @@ class PipelineProgress:
 class PipelineOrchestrator:
     ingest: IngestVideos
     transcribe: TranscribeVideo
+    select: SelectClips
     manifests: ManifestRepository
     _handlers: dict[Stage, StageHandler] = field(init=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         # Register only the per-video stages that exist in this slice.
         self._handlers[Stage.TRANSCRIBE] = self.transcribe.execute
+        self._handlers[Stage.SELECT] = self.select.execute
 
     def run(
         self,
