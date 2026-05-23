@@ -33,7 +33,7 @@ class SelectClips:
     manifests: ManifestRepository
     constraints: SelectionConstraints
 
-    def execute(self, manifest: Manifest) -> Manifest:
+    def execute(self, manifest: Manifest, options: object = None) -> Manifest:
         if manifest.transcript_path is None:
             raise CannotSelect(f"'{manifest.source.id}' has no transcript — run transcribe first")
 

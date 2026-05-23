@@ -24,7 +24,7 @@ class TranscribeVideo:
     manifests: ManifestRepository
     options: TranscriptionOptions
 
-    def execute(self, manifest: Manifest) -> Manifest:
+    def execute(self, manifest: Manifest, options: object = None) -> Manifest:
         if not manifest.source.is_ingested:
             raise CannotTranscribe(
                 f"'{manifest.source.id}' has no metadata — run ingest first"

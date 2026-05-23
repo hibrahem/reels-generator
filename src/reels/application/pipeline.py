@@ -14,12 +14,16 @@ from dataclasses import dataclass, field
 from .manifest import Manifest
 from .pipeline_stage import Stage, stages_between
 from .ports.manifest_repository import ManifestRepository
+from .run_options import RunOptions
+from .use_cases.cut_clips import CutClips
 from .use_cases.ingest_videos import IngestVideos
+from .use_cases.plan_layout import PlanLayout
+from .use_cases.reframe_clips import ReframeClips
 from .use_cases.select_clips import SelectClips
 from .use_cases.transcribe_video import TranscribeVideo
 
-# A per-video stage handler advances one manifest by one stage.
-StageHandler = Callable[[Manifest], Manifest]
+# A per-video stage handler advances one manifest by one stage, honoring per-run options.
+StageHandler = Callable[[Manifest, RunOptions], Manifest]
 
 
 class StageNotBuilt(NotImplementedError):
@@ -40,6 +44,9 @@ class PipelineOrchestrator:
     ingest: IngestVideos
     transcribe: TranscribeVideo
     select: SelectClips
+    plan_layout: PlanLayout
+    cut: CutClips
+    reframe: ReframeClips
     manifests: ManifestRepository
     _handlers: dict[Stage, StageHandler] = field(init=False, default_factory=dict)
 
@@ -47,14 +54,19 @@ class PipelineOrchestrator:
         # Register only the per-video stages that exist in this slice.
         self._handlers[Stage.TRANSCRIBE] = self.transcribe.execute
         self._handlers[Stage.SELECT] = self.select.execute
+        self._handlers[Stage.PLAN_LAYOUT] = self.plan_layout.execute
+        self._handlers[Stage.CUT] = self.cut.execute
+        self._handlers[Stage.REFRAME] = self.reframe.execute
 
     def run(
         self,
         from_stage: Stage = Stage.INGEST,
         to_stage: Stage = Stage.PACKAGE,
         on_progress: Callable[[PipelineProgress], None] | None = None,
+        options: RunOptions | None = None,
     ) -> list[Manifest]:
         report = on_progress or (lambda _: None)
+        options = options or RunOptions()
 
         if from_stage <= Stage.INGEST:
             manifests = self.ingest.execute()
@@ -77,7 +89,7 @@ class PipelineOrchestrator:
                         f"Stage '{stage.value}' is not built yet (later slice). "
                         f"Stopping after the last completed stage for '{manifest.source.id}'."
                     )
-                manifest = handler(manifest)
+                manifest = handler(manifest, options)
                 report(PipelineProgress(stage, manifest.source.id.value, "done"))
 
         return manifests

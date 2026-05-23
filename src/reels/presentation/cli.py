@@ -15,6 +15,7 @@ from rich.table import Table
 
 from reels.application.pipeline import PipelineProgress, StageNotBuilt
 from reels.application.pipeline_stage import Stage
+from reels.application.run_options import RunOptions
 from reels.infrastructure.llm.clip_json import MalformedSelectionResponse
 from reels.infrastructure.llm.errors import SelectionUnavailable
 from reels.presentation.container import Container
@@ -40,6 +41,10 @@ def run(
     to_stage: Annotated[
         Stage, typer.Option("--to", help="Stop after this stage.")
     ] = Stage.PACKAGE,
+    reel: Annotated[
+        list[int] | None,
+        typer.Option("--reel", help="Limit per-reel stages to these reel indices (repeatable)."),
+    ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
 ) -> None:
     """Run the pipeline over the configured input folder."""
@@ -47,10 +52,11 @@ def run(
     container = _load(config)
     _preflight(container, from_stage, to_stage)
 
+    options = RunOptions(reel_indices=frozenset(reel) if reel else None)
     console.rule(f"[bold]Running pipeline: {from_stage.value} → {to_stage.value}")
     try:
         manifests = container.orchestrator.run(
-            from_stage=from_stage, to_stage=to_stage, on_progress=_print_progress
+            from_stage=from_stage, to_stage=to_stage, on_progress=_print_progress, options=options
         )
     except StageNotBuilt as exc:
         console.print(f"\n[yellow]⏸  {exc}")

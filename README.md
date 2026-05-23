@@ -99,7 +99,7 @@ Built in thin slices per spec §10, stopping at each human checkpoint:
 
 - [x] **Slice 1** — Skeleton + ingest + transcribe (word-level transcript JSON).
 - [x] **Slice 2** — Select (LLM clip selection; DeepSeek/OpenAI/Claude; validated + reconciled).
-- [ ] Slice 3 — Cut + MODE A reframe.
+- [x] **Slice 3** — Cut + MODE A reframe (OpenCV presenter detection → 9:16 presenter crop; `--reel` filter).
 - [ ] Slice 4 — Arabic captions (the gate).
 - [ ] Slice 5 — Brand + package.
 - [ ] Slice 6 — Loop over clips.

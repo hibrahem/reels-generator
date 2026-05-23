@@ -13,14 +13,22 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from reels.application.pipeline import PipelineOrchestrator
+from reels.application.ports.video_editor import RenderSpec
+from reels.application.use_cases.cut_clips import CutClips
 from reels.application.use_cases.ingest_videos import IngestVideos
+from reels.application.use_cases.plan_layout import PlanLayout
+from reels.application.use_cases.reframe_clips import ReframeClips
 from reels.application.use_cases.select_clips import SelectClips
 from reels.application.use_cases.transcribe_video import TranscribeVideo
 from reels.domain.reel.clip_selector import ClipSelector, SelectionConstraints
 from reels.domain.services.clip_reconciliation import ClipReconciliationService
+from reels.domain.services.presenter_crop_planner import PresenterCropPlanner
+from reels.domain.shared.value_objects import Resolution
 from reels.domain.transcript.transcriber import TranscriptionOptions
 from reels.infrastructure.config.settings import Settings, load_settings
+from reels.infrastructure.detection.opencv_presenter_detector import OpenCVPresenterDetector
 from reels.infrastructure.ffmpeg.ffmpeg_media_environment import FFmpegMediaEnvironment
+from reels.infrastructure.ffmpeg.ffmpeg_video_editor import FFmpegVideoEditor
 from reels.infrastructure.ffmpeg.ffprobe_video_prober import FFprobeVideoProber
 from reels.infrastructure.llm.errors import SelectionUnavailable
 from reels.infrastructure.llm.lazy import LazyClipSelector
@@ -93,8 +101,34 @@ class Container:
             ),
         )
 
+        editor = FFmpegVideoEditor(
+            RenderSpec(
+                resolution=Resolution(settings.output.width, settings.output.height),
+                video_codec=settings.output.video_codec,
+                audio_codec=settings.output.audio_codec,
+                video_bitrate=settings.output.video_bitrate,
+                audio_bitrate=settings.output.audio_bitrate,
+                faststart=settings.output.faststart,
+            )
+        )
+        plan_layout = PlanLayout(
+            detector=OpenCVPresenterDetector(),
+            planner=PresenterCropPlanner(),
+            manifests=manifests,
+            sample_interval_seconds=settings.layout.detection_sample_interval_seconds,
+            anchor=settings.layout.presenter_anchor,
+        )
+        cut = CutClips(editor=editor, manifests=manifests)
+        reframe = ReframeClips(editor=editor, manifests=manifests)
+
         orchestrator = PipelineOrchestrator(
-            ingest=ingest, transcribe=transcribe, select=select, manifests=manifests
+            ingest=ingest,
+            transcribe=transcribe,
+            select=select,
+            plan_layout=plan_layout,
+            cut=cut,
+            reframe=reframe,
+            manifests=manifests,
         )
         return cls(
             settings=settings,
