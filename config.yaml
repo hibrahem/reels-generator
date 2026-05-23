@@ -54,6 +54,7 @@ captions:
   bold: true
   box: false                  # no background box (clean look like the reference)
   box_color: "&H90000000"     # AABBGGRR — used only when box: true
+  strip_punctuation: true     # drop . , ? ! etc. for clean Arabic captions (avoids bidi noise)
 
 brand:
   logo_position: bottom-right   # bottom-right|bottom-left|top-right|top-left|bottom-center

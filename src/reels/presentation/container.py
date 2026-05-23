@@ -133,7 +133,10 @@ class Container:
         cut = CutClips(editor=editor, manifests=manifests)
         reframe = ReframeClips(editor=editor, manifests=manifests)
         caption = CaptionClips(
-            transcripts=transcripts, renderer=caption_renderer, manifests=manifests
+            transcripts=transcripts,
+            renderer=caption_renderer,
+            manifests=manifests,
+            strip_punctuation=settings.captions.strip_punctuation,
         )
         brand = BrandReels(
             editor=editor,
