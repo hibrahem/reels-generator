@@ -13,6 +13,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from reels.application.pipeline import PipelineOrchestrator
+from reels.application.ports.caption_normalizer import CaptionNormalizer
 from reels.application.ports.video_editor import LogoOverlay, RenderSpec
 from reels.application.use_cases.brand_reels import BrandReels
 from reels.application.use_cases.caption_clips import CaptionClips
@@ -37,6 +38,7 @@ from reels.infrastructure.ffmpeg.ffmpeg_video_editor import FFmpegVideoEditor
 from reels.infrastructure.ffmpeg.ffprobe_video_prober import FFprobeVideoProber
 from reels.infrastructure.llm.errors import SelectionUnavailable
 from reels.infrastructure.llm.lazy import LazyClipSelector
+from reels.infrastructure.llm.lazy_normalizer import LazyCaptionNormalizer
 from reels.infrastructure.llm.provider_profiles import PROVIDER_PROFILES, ProviderProfile
 from reels.infrastructure.persistence.file_sidecar_writer import FileSidecarWriter
 from reels.infrastructure.persistence.filesystem_video_library import FilesystemVideoLibrary
@@ -137,6 +139,8 @@ class Container:
             renderer=caption_renderer,
             manifests=manifests,
             strip_punctuation=settings.captions.strip_punctuation,
+            normalizer=LazyCaptionNormalizer(lambda: _build_normalizer(settings, provider)),
+            normalize_english=settings.captions.normalize_english,
         )
         brand = BrandReels(
             editor=editor,
@@ -195,6 +199,24 @@ def _logo_overlay(settings: Settings) -> LogoOverlay | None:
         position=settings.brand.logo_position,
         opacity=settings.brand.logo_opacity,
         width_ratio=settings.brand.logo_width_ratio,
+    )
+
+
+def _build_normalizer(settings: Settings, provider: ResolvedProvider) -> CaptionNormalizer:
+    api_key = os.environ.get(provider.key_env)
+    if not api_key:
+        raise SelectionUnavailable(
+            f"caption English-normalization needs ${provider.key_env}, which is not set. "
+            "Add it to a .env file or disable captions.normalize_english."
+        )
+    from reels.infrastructure.llm.llm_caption_normalizer import LLMCaptionNormalizer
+
+    return LLMCaptionNormalizer(
+        api_key=api_key,
+        model=provider.model,
+        base_url=provider.base_url,
+        openai_compatible=provider.openai_compatible,
+        max_retries=settings.selection.max_retries,
     )
 
 

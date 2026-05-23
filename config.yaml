@@ -56,6 +56,7 @@ captions:
   box_color: "&H90000000"     # AABBGGRR — used only when box: true
   strip_punctuation: true     # drop . , ? ! etc. for clean Arabic captions (avoids bidi noise)
   reverse_word_order: true    # flip per-line word order (first-spoken word appears on the left)
+  normalize_english: true     # convert transliterated English terms to Latin (كوبلينج→Coupling) via the LLM
 
 brand:
   logo_position: bottom-right   # bottom-right|bottom-left|top-right|top-left|bottom-center
