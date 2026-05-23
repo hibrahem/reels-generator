@@ -55,6 +55,7 @@ captions:
   box: false                  # no background box (clean look like the reference)
   box_color: "&H90000000"     # AABBGGRR — used only when box: true
   strip_punctuation: true     # drop . , ? ! etc. for clean Arabic captions (avoids bidi noise)
+  reverse_word_order: true    # flip per-line word order (first-spoken word appears on the left)
 
 brand:
   logo_position: bottom-right   # bottom-right|bottom-left|top-right|top-left|bottom-center

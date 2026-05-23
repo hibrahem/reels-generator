@@ -217,6 +217,7 @@ def _caption_style(settings: Settings) -> CaptionStyle:
         bold=c.bold,
         box=c.box,
         box_color=c.box_color,
+        reverse_word_order=c.reverse_word_order,
     )
 
 

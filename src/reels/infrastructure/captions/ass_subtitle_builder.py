@@ -38,6 +38,7 @@ class CaptionStyle:
     bold: bool = True
     box: bool = True
     box_color: str = "&H90000000"
+    reverse_word_order: bool = False  # flip per-line word order (first-spoken word on the left)
 
 
 def build_ass(words: list[CaptionWord], style: CaptionStyle) -> str:
@@ -51,6 +52,9 @@ def build_ass(words: list[CaptionWord], style: CaptionStyle) -> str:
             nxt = chunk[i + 1].start if i + 1 < len(chunk) else word.end
             dur_cs = max(1, round((nxt - word.start) * 100))  # karaoke unit = centiseconds
             parts.append(f"{{\\k{dur_cs}}}{word.text}")
+        if style.reverse_word_order:
+            # Emit reversed: after libass's RTL bidi this puts the first-spoken word on the left.
+            parts.reverse()
         text = " ".join(parts)
         lines.append(f"Dialogue: 0,{_ts(start)},{_ts(end)},Default,,0,0,0,,{text}")
     return "\n".join(lines) + "\n"

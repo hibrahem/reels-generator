@@ -69,6 +69,7 @@ class CaptionsConfig(BaseModel):
     box: bool = True  # draw a translucent background box behind the text
     box_color: str = "&H90000000"  # box colour (AABBGGRR; AA=90 ≈ 56% opaque black)
     strip_punctuation: bool = True  # drop punctuation (cleaner Arabic captions, avoids bidi noise)
+    reverse_word_order: bool = False  # flip per-line word order (first-spoken word on the left)
 
 
 class BrandConfig(BaseModel):

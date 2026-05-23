@@ -49,6 +49,21 @@ def test_timestamp_format():
     assert "0:01:01.50" in ass  # 61.5s -> 0:01:01.50
 
 
+def test_reverse_word_order_flips_emission():
+    import dataclasses
+
+    words = [
+        CaptionWord("ريت", 0.0, 0.3),
+        CaptionWord("تتخلص", 0.3, 0.7),
+        CaptionWord("الموضوع", 0.7, 1.1),
+    ]
+    normal = build_ass(words, STYLE)
+    reversed_ = build_ass(words, dataclasses.replace(STYLE, reverse_word_order=True))
+    # normal emits spoken order; reversed emits last-spoken first
+    assert normal.index("ريت") < normal.index("الموضوع")
+    assert reversed_.index("الموضوع") < reversed_.index("ريت")
+
+
 def test_empty_words_still_valid_document():
     ass = build_ass([], STYLE)
     assert "[Events]" in ass
