@@ -37,3 +37,19 @@ def build_preview(
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(f"preview encode failed: {exc.stderr.strip()}") from exc
     return out
+
+
+def build_poster(src: Path, out: Path, at_seconds: float, ffmpeg_path: str | None = None) -> Path:
+    """Extract a single downscaled poster frame for a library thumbnail."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    ffmpeg = ffmpeg_path or shutil.which("ffmpeg") or "ffmpeg"
+    cmd = [
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+        "-ss", f"{max(at_seconds, 0):.2f}", "-i", str(src),
+        "-frames:v", "1", "-vf", "scale=640:-2", str(out),
+    ]
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"poster extract failed: {exc.stderr.strip()}") from exc
+    return out

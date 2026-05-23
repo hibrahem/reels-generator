@@ -1,4 +1,4 @@
-import { STAGES, type VideoSummary } from "../lib/api";
+import { posterUrl, STAGES, type VideoSummary } from "../lib/api";
 
 function fmtDuration(s: number | null): string {
   if (s == null) return "—";
@@ -12,8 +12,22 @@ export function VideoCard({ video, onOpen }: { video: VideoSummary; onOpen: (id:
   return (
     <button
       onClick={() => onOpen(video.id)}
-      className="flex w-full flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-left transition hover:border-zinc-600 hover:bg-zinc-900"
+      className="flex w-full flex-col gap-3 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 text-left transition hover:border-zinc-600 hover:bg-zinc-900"
     >
+      {video.ingested ? (
+        <img
+          src={posterUrl(video.id)}
+          alt=""
+          loading="lazy"
+          className="aspect-video w-full bg-zinc-800 object-cover"
+          onError={(e) => (e.currentTarget.style.display = "none")}
+        />
+      ) : (
+        <div className="flex aspect-video w-full items-center justify-center bg-zinc-800/50 text-3xl">
+          🎬
+        </div>
+      )}
+      <div className="flex flex-col gap-3 p-4 pt-0">
       <div className="flex items-start justify-between gap-2">
         <h3 className="line-clamp-2 font-medium text-zinc-100">{video.filename}</h3>
         {!video.ingested && (
@@ -47,6 +61,7 @@ export function VideoCard({ video, onOpen }: { video: VideoSummary; onOpen: (id:
             {s}
           </span>
         ))}
+      </div>
       </div>
     </button>
   );

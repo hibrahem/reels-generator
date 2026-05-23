@@ -107,6 +107,26 @@ def get_media(video_id: str, state: StateDep) -> FileResponse:
     return FileResponse(manifest.source.path, media_type=_video_mime(manifest.source.path.suffix))
 
 
+@router.get("/videos/{video_id}/poster")
+def get_poster(video_id: str, state: StateDep) -> FileResponse:
+    c = state.container
+    manifest = c.manifests.load(video_id)
+    if manifest is None or not manifest.source.path.exists():
+        raise HTTPException(status_code=404, detail="source video not found")
+    poster = manifest.source.working_dir / "poster.jpg"
+    if not poster.exists():
+        from reels.infrastructure.ffmpeg.preview import build_poster
+
+        meta = manifest.source.metadata
+        at = (meta.duration_seconds / 2) if meta else 5.0
+        ffmpeg_path = str(c.settings.paths.ffmpeg) if c.settings.paths.ffmpeg else None
+        try:
+            build_poster(manifest.source.path, poster, at, ffmpeg_path)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return FileResponse(poster, media_type="image/jpeg")
+
+
 @router.get("/videos/{video_id}/reels/{index}/media")
 def get_reel_media(video_id: str, index: int, state: StateDep) -> FileResponse:
     c = state.container

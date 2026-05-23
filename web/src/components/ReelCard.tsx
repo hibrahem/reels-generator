@@ -174,6 +174,15 @@ export function ReelCard({
                 {showFinished ? "Hide reel" : "Preview reel"}
               </button>
             )}
+            {packaged && (
+              <a
+                href={reelMediaUrl(videoId, reel.index)}
+                download={reel.output_filename}
+                className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700"
+              >
+                ↓ Download
+              </a>
+            )}
           </>
         ) : (
           <>

@@ -136,6 +136,7 @@ export function subscribeJob(
 }
 
 export const mediaUrl = (id: string) => `/api/videos/${encodeURIComponent(id)}/media`;
+export const posterUrl = (id: string) => `/api/videos/${encodeURIComponent(id)}/poster`;
 export const reelMediaUrl = (id: string, index: number) =>
   `/api/videos/${encodeURIComponent(id)}/reels/${index}/media`;
 
