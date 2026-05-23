@@ -10,7 +10,8 @@ paths:
   intro: null                 # optional path to an intro clip (mp4) — wired at brand stage
   outro: null                 # optional path to an outro clip (mp4)
   logo: null                  # optional path to a logo overlay (png with alpha)
-  font: ./assets/fonts/NotoNaskhArabic-Regular.ttf  # Arabic-capable font for caption burn-in
+  font: ./assets/fonts/Amiri-Regular.ttf  # Arabic-capable font for caption burn-in
+  ffmpeg: ./vendor/ffmpeg/bin/ffmpeg  # libass-enabled ffmpeg (system brew build lacks libass)
 
 transcription:
   backend: faster-whisper     # faster-whisper | whisperx
@@ -39,7 +40,7 @@ layout:
   presenter_anchor: right     # source layout: presenter on the right side of the frame
 
 captions:
-  font_family: Noto Naskh Arabic
+  font_family: Amiri        # must match the family name of paths.font
   base_font_size: 64
   active_font_size: 72
   base_color: "&H00FFFFFF"    # libass BGR+alpha — white

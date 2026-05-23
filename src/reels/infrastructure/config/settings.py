@@ -21,6 +21,7 @@ class PathsConfig(BaseModel):
     outro: Path | None = None
     logo: Path | None = None
     font: Path
+    ffmpeg: Path | None = None  # override the ffmpeg binary (e.g. a libass-enabled build)
 
 
 class TranscriptionConfig(BaseModel):

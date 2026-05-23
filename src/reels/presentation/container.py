@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from reels.application.pipeline import PipelineOrchestrator
 from reels.application.ports.video_editor import RenderSpec
+from reels.application.use_cases.caption_clips import CaptionClips
 from reels.application.use_cases.cut_clips import CutClips
 from reels.application.use_cases.ingest_videos import IngestVideos
 from reels.application.use_cases.plan_layout import PlanLayout
@@ -25,6 +26,8 @@ from reels.domain.services.clip_reconciliation import ClipReconciliationService
 from reels.domain.services.presenter_crop_planner import PresenterCropPlanner
 from reels.domain.shared.value_objects import Resolution
 from reels.domain.transcript.transcriber import TranscriptionOptions
+from reels.infrastructure.captions.ass_subtitle_builder import CaptionStyle
+from reels.infrastructure.captions.libass_caption_renderer import LibassCaptionRenderer
 from reels.infrastructure.config.settings import Settings, load_settings
 from reels.infrastructure.detection.opencv_presenter_detector import OpenCVPresenterDetector
 from reels.infrastructure.ffmpeg.ffmpeg_media_environment import FFmpegMediaEnvironment
@@ -101,15 +104,21 @@ class Container:
             ),
         )
 
-        editor = FFmpegVideoEditor(
-            RenderSpec(
-                resolution=Resolution(settings.output.width, settings.output.height),
-                video_codec=settings.output.video_codec,
-                audio_codec=settings.output.audio_codec,
-                video_bitrate=settings.output.video_bitrate,
-                audio_bitrate=settings.output.audio_bitrate,
-                faststart=settings.output.faststart,
-            )
+        ffmpeg_path = str(settings.paths.ffmpeg) if settings.paths.ffmpeg else None
+        render_spec = RenderSpec(
+            resolution=Resolution(settings.output.width, settings.output.height),
+            video_codec=settings.output.video_codec,
+            audio_codec=settings.output.audio_codec,
+            video_bitrate=settings.output.video_bitrate,
+            audio_bitrate=settings.output.audio_bitrate,
+            faststart=settings.output.faststart,
+        )
+        editor = FFmpegVideoEditor(render_spec, ffmpeg_path=ffmpeg_path)
+        caption_renderer = LibassCaptionRenderer(
+            style=_caption_style(settings),
+            fonts_dir=settings.paths.font.parent,
+            spec=render_spec,
+            ffmpeg_path=ffmpeg_path,
         )
         plan_layout = PlanLayout(
             detector=OpenCVPresenterDetector(),
@@ -120,6 +129,9 @@ class Container:
         )
         cut = CutClips(editor=editor, manifests=manifests)
         reframe = ReframeClips(editor=editor, manifests=manifests)
+        caption = CaptionClips(
+            transcripts=transcripts, renderer=caption_renderer, manifests=manifests
+        )
 
         orchestrator = PipelineOrchestrator(
             ingest=ingest,
@@ -128,12 +140,13 @@ class Container:
             plan_layout=plan_layout,
             cut=cut,
             reframe=reframe,
+            caption=caption,
             manifests=manifests,
         )
         return cls(
             settings=settings,
             orchestrator=orchestrator,
-            media_environment=FFmpegMediaEnvironment(),
+            media_environment=FFmpegMediaEnvironment(ffmpeg_path=ffmpeg_path),
             provider=provider,
         )
 
@@ -151,6 +164,25 @@ def _resolve_provider(settings: Settings) -> ResolvedProvider:
         base_url=base_url,
         key_env=key_env,
         openai_compatible=profile.openai_compatible,
+    )
+
+
+def _caption_style(settings: Settings) -> CaptionStyle:
+    c = settings.captions
+    return CaptionStyle(
+        font_family=c.font_family,
+        base_font_size=c.base_font_size,
+        active_font_size=c.active_font_size,
+        base_color=c.base_color,
+        active_color=c.active_color,
+        position=c.position,
+        safe_margin_v=c.safe_margin_v,
+        safe_margin_h=c.safe_margin_h,
+        max_words_per_line=c.max_words_per_line,
+        outline=c.outline,
+        shadow=c.shadow,
+        play_res_x=settings.output.width,
+        play_res_y=settings.output.height,
     )
 
 

@@ -40,17 +40,21 @@ src/reels/
 - **Python 3.12** (managed via [`uv`](https://docs.astral.sh/uv/)).
 - **FFmpeg with libass** for subtitle burn-in.
 
-  > ⚠️ The current Homebrew `ffmpeg` formula no longer bundles libass. A libass-enabled build is
-  > required for the **caption** and **brand** stages (it is *not* needed for ingest/transcribe).
-  > Install a full build, e.g. via the community tap:
+  > ⚠️ The current Homebrew `ffmpeg` (8.x) ships **without libass** — and neither the core nor the
+  > `homebrew-ffmpeg` tap formula exposes a `--with-libass` option anymore. A libass-enabled build
+  > is required for the **caption** and **brand** stages (not for ingest/transcribe/cut/reframe).
+  >
+  > Compile one from source against Homebrew's libass (≈10–15 min), then point `paths.ffmpeg` at it:
   >
   > ```bash
-  > brew tap homebrew-ffmpeg/ffmpeg
-  > brew install homebrew-ffmpeg/ffmpeg/ffmpeg --with-libass --with-fontconfig --with-freetype --with-fribidi
+  > brew install libass x264 pkg-config
+  > # configure with --enable-gpl --enable-libx264 --enable-libass --enable-libfreetype \
+  > #   --enable-libfontconfig --enable-libfribidi --enable-libharfbuzz, install under ./vendor/ffmpeg
   > ```
   >
-  > The CLI checks libass capability at startup and fails fast (with this remediation) only when a
-  > stage that needs it actually runs.
+  > Set `paths.ffmpeg: ./vendor/ffmpeg/bin/ffmpeg` in `config.yaml`. The CLI checks libass capability
+  > at startup and fails fast (with remediation) only when a stage that needs it actually runs;
+  > `reels doctor` shows the status.
 
 ## Setup
 
@@ -100,7 +104,7 @@ Built in thin slices per spec §10, stopping at each human checkpoint:
 - [x] **Slice 1** — Skeleton + ingest + transcribe (word-level transcript JSON).
 - [x] **Slice 2** — Select (LLM clip selection; DeepSeek/OpenAI/Claude; validated + reconciled).
 - [x] **Slice 3** — Cut + MODE A reframe (OpenCV presenter detection → 9:16 presenter crop; `--reel` filter).
-- [ ] Slice 4 — Arabic captions (the gate).
+- [x] **Slice 4** — Arabic captions (word-by-word `{\k}` karaoke via libass; shaping/bidi/code-switch verified by the harness).
 - [ ] Slice 5 — Brand + package.
 - [ ] Slice 6 — Loop over clips.
 - [ ] Slice 7 — Loop over folder.
