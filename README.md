@@ -88,14 +88,46 @@ uv run reels run --config config.yaml
 # Resume from a specific stage (re-uses prior stage outputs from the manifest):
 uv run reels run --from select --config config.yaml
 
+# Resume between a range of stages (e.g. just transcribe):
+uv run reels run --from transcribe --to transcribe
+
+# Process only specific reels (per-reel stages):
+uv run reels run --from plan-layout --to package --reel 3 --reel 7
+
 # Inspect environment / dependency health:
 uv run reels doctor
-
-# Slice 1 (current): ingest + transcribe a single video and print the transcript path:
-uv run reels run --from ingest --only transcribe --config config.yaml
 ```
 
 Configuration lives in [`config.yaml`](./config.yaml) (see spec §7). Secrets are env-vars only.
+
+## Web app — Reels Studio
+
+A local browser UI to drive and visualize the whole pipeline (spec:
+[`WEB_APP_SPEC.md`](./WEB_APP_SPEC.md)). It's a FastAPI delivery adapter that reuses the same
+use cases as the CLI (no business logic in the web tier) plus a React/Vite SPA.
+
+```bash
+uv sync --extra web           # install the web dependencies (FastAPI, uvicorn, …)
+
+# Build the SPA once (outputs web/dist, which the server serves):
+cd web && npm install && npm run build && cd ..
+
+uv run --extra web reels web  # → http://127.0.0.1:8000
+```
+
+What you can do in the browser:
+
+- **Library** — video cards with poster thumbnails + per-stage badges; scan the input folder.
+- **Video detail** — the original player with **reel markers on the timeline** (click a block to play
+  that span; it auto-stops at the reel's end); a reels panel; and the **transcript** synced to playback.
+- **Pipeline** — run any stage range, all reels, or a single reel, with **live per-stage progress** (SSE).
+- **Reels** — preview/download finished reels, and **trim/split + edit** hook/caption or **delete** a reel.
+- **Config** — edit all of `config.yaml` from a form (secrets stay in `.env`); a Health/Doctor panel.
+- **Gallery** — every finished reel with inline players and downloads.
+- **Generate preview** — transcodes a browser-friendly proxy so `.mov`/PCM sources play with audio in Chrome.
+
+> Dev mode (hot reload): run `uv run --extra web reels web` in one terminal and `npm run dev` in
+> `web/` in another — Vite proxies `/api` to the backend at :8000.
 
 ## Build status
 
@@ -106,6 +138,7 @@ Built in thin slices per spec §10, stopping at each human checkpoint:
 - [x] **Slice 3** — Cut + MODE A reframe (OpenCV presenter detection → 9:16 presenter crop; `--reel` filter).
 - [x] **Slice 4** — Arabic captions (word-by-word `{\k}` karaoke via libass; shaping/bidi/code-switch verified by the harness).
 - [x] **Slice 5** — Brand (intro/outro concat + logo overlay) + package (`{source}__NN__{slug}.mp4` + `reels.json`/`reels.md`).
-- [ ] Slice 6 — Loop over clips.
-- [ ] Slice 7 — Loop over folder.
+- [x] **Slice 6/7** — Loop over clips / folder (`reels run` processes all reels and all input videos; `--reel` narrows).
 - [ ] Slice 8 — MODE B (stacked slides + presenter).
+
+Plus **Reels Studio** — the web UI (see above and [`WEB_APP_SPEC.md`](./WEB_APP_SPEC.md)).
