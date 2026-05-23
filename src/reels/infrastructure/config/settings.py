@@ -54,17 +54,20 @@ class LayoutConfig(BaseModel):
 
 
 class CaptionsConfig(BaseModel):
-    font_family: str = "Noto Naskh Arabic"
-    base_font_size: int = 64
-    active_font_size: int = 72
+    font_family: str = "Amiri"
+    base_font_size: int = 88
+    active_font_size: int = 96
     base_color: str = "&H00FFFFFF"
     active_color: str = "&H0000D7FF"
     position: Literal["bottom", "center"] = "bottom"
-    safe_margin_v: int = 220
+    safe_margin_v: int = 260
     safe_margin_h: int = 80
-    max_words_per_line: int = 5
+    max_words_per_line: int = 4
     outline: int = 3
-    shadow: int = 1
+    shadow: int = 0
+    bold: bool = True
+    box: bool = True  # draw a translucent background box behind the text
+    box_color: str = "&H90000000"  # box colour (AABBGGRR; AA=90 ≈ 56% opaque black)
 
 
 class OutputConfig(BaseModel):

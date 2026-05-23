@@ -35,6 +35,9 @@ class CaptionStyle:
     shadow: int
     play_res_x: int
     play_res_y: int
+    bold: bool = True
+    box: bool = True
+    box_color: str = "&H90000000"
 
 
 def build_ass(words: list[CaptionWord], style: CaptionStyle) -> str:
@@ -88,11 +91,17 @@ def _styles(style: CaptionStyle) -> str:
     )
     # PrimaryColour = sung (active) colour, SecondaryColour = unsung (base) colour: as each word's
     # karaoke time arrives it flips from base to active.
+    bold = 1 if style.bold else 0
+    if style.box:
+        # BorderStyle 3 = opaque box; OutlineColour is the box fill, Outline its padding.
+        border_style, outline_colour, outline, shadow = 3, style.box_color, max(style.outline, 6), 0
+    else:
+        border_style, outline_colour, outline, shadow = 1, "&H00101010", style.outline, style.shadow
     style_line = (
         f"Style: Default,{style.font_family},{style.base_font_size},{style.active_color},"
-        f"{style.base_color},&H00101010,&H64000000,0,0,0,0,100,100,0,0,1,{style.outline},"
-        f"{style.shadow},{alignment},{style.safe_margin_h},{style.safe_margin_h},"
-        f"{style.safe_margin_v},1"
+        f"{style.base_color},{outline_colour},&H00000000,{bold},0,0,0,100,100,0,0,"
+        f"{border_style},{outline},{shadow},{alignment},{style.safe_margin_h},"
+        f"{style.safe_margin_h},{style.safe_margin_v},1"
     )
     return f"\n[V4+ Styles]\n{fmt}\n{style_line}\n"
 
