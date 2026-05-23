@@ -21,6 +21,7 @@ class PathsConfig(BaseModel):
     outro: Path | None = None
     logo: Path | None = None
     font: Path
+    ffmpeg: Path | None = None  # override the ffmpeg binary (e.g. a libass-enabled build)
 
 
 class TranscriptionConfig(BaseModel):
@@ -33,8 +34,12 @@ class TranscriptionConfig(BaseModel):
 
 
 class SelectionConfig(BaseModel):
-    provider: Literal["openai", "claude"] = "openai"
+    # 'deepseek' and 'openai' share one OpenAI-compatible adapter (they differ only by base_url
+    # and which env var holds the key). 'claude' uses the Anthropic SDK.
+    provider: Literal["openai", "deepseek", "claude"] = "openai"
     model: str = "gpt-4o"
+    base_url: str | None = None  # override the API endpoint (OpenAI-compatible providers)
+    api_key_env: str | None = None  # override which env var holds the key
     temperature: float = 0.2
     min_clip_seconds: float = 20.0
     max_clip_seconds: float = 90.0
@@ -49,17 +54,28 @@ class LayoutConfig(BaseModel):
 
 
 class CaptionsConfig(BaseModel):
-    font_family: str = "Noto Naskh Arabic"
-    base_font_size: int = 64
-    active_font_size: int = 72
+    font_family: str = "Amiri"
+    base_font_size: int = 88
+    active_font_size: int = 96
     base_color: str = "&H00FFFFFF"
     active_color: str = "&H0000D7FF"
     position: Literal["bottom", "center"] = "bottom"
-    safe_margin_v: int = 220
+    safe_margin_v: int = 260
     safe_margin_h: int = 80
-    max_words_per_line: int = 5
+    max_words_per_line: int = 4
     outline: int = 3
-    shadow: int = 1
+    shadow: int = 0
+    bold: bool = True
+    box: bool = True  # draw a translucent background box behind the text
+    box_color: str = "&H90000000"  # box colour (AABBGGRR; AA=90 ≈ 56% opaque black)
+
+
+class BrandConfig(BaseModel):
+    logo_position: Literal[
+        "bottom-right", "bottom-left", "top-right", "top-left", "bottom-center"
+    ] = "bottom-right"
+    logo_opacity: float = Field(default=1.0, ge=0.0, le=1.0)
+    logo_width_ratio: float = Field(default=0.18, gt=0.0, le=1.0)
 
 
 class OutputConfig(BaseModel):
@@ -78,6 +94,7 @@ class Settings(BaseModel):
     selection: SelectionConfig = SelectionConfig()
     layout: LayoutConfig = LayoutConfig()
     captions: CaptionsConfig = CaptionsConfig()
+    brand: BrandConfig = BrandConfig()
     output: OutputConfig = OutputConfig()
 
 

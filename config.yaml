@@ -10,7 +10,8 @@ paths:
   intro: null                 # optional path to an intro clip (mp4) — wired at brand stage
   outro: null                 # optional path to an outro clip (mp4)
   logo: null                  # optional path to a logo overlay (png with alpha)
-  font: ./assets/fonts/NotoNaskhArabic-Regular.ttf  # Arabic-capable font for caption burn-in
+  font: ./assets/fonts/Almarai-Bold.ttf  # bold modern sans-serif Arabic for caption burn-in
+  ffmpeg: ./vendor/ffmpeg/bin/ffmpeg  # libass-enabled ffmpeg (system brew build lacks libass)
 
 transcription:
   backend: faster-whisper     # faster-whisper | whisperx
@@ -21,12 +22,16 @@ transcription:
   beam_size: 5
 
 selection:
-  provider: openai            # openai | claude
-  model: gpt-4o               # selection model (text-only); claude default: claude-sonnet-4-6
-  temperature: 0.2
-  min_clip_seconds: 20
+  provider: deepseek          # openai | deepseek | claude  (openai & deepseek share one adapter)
+  model: deepseek-chat        # exact API model id; set to whatever your account exposes
+  # base_url: https://api.deepseek.com   # optional override (defaults per provider)
+  # api_key_env: DEEPSEEK_API_KEY        # optional override of which env var holds the key
+  temperature: 0.0            # deterministic selection (reduces run-to-run variance)
+  min_clip_seconds: 15
   max_clip_seconds: 90
   max_retries: 1              # retry once on malformed JSON
+  # The API key is read from the environment (DEEPSEEK_API_KEY here) — see .env.example.
+  # You can also override model/base_url via env: REELS_SELECTION_MODEL, REELS_SELECTION_BASE_URL.
 
 layout:
   mode_b_split_ratio: 0.5     # MODE B: fraction of vertical canvas given to slides (top)
@@ -35,17 +40,26 @@ layout:
   presenter_anchor: right     # source layout: presenter on the right side of the frame
 
 captions:
-  font_family: Noto Naskh Arabic
-  base_font_size: 64
-  active_font_size: 72
-  base_color: "&H00FFFFFF"    # libass BGR+alpha — white
-  active_color: "&H0000D7FF"  # amber highlight for the spoken word
+  font_family: Almarai      # must match the family name of paths.font
+  base_font_size: 100
+  active_font_size: 108
+  base_color: "&H00FFFFFF"    # white (unsung word)
+  active_color: "&H00FFFFFF"  # white too — uniform look like the reference (set a colour for a pop)
   position: bottom            # bottom | center
-  safe_margin_v: 220          # px from bottom edge so platform UI doesn't cover captions
-  safe_margin_h: 80           # px from left/right edges
-  max_words_per_line: 5
-  outline: 3
-  shadow: 1
+  safe_margin_v: 320          # px from bottom edge (sits in the lower third)
+  safe_margin_h: 70           # px from left/right edges
+  max_words_per_line: 3
+  outline: 5                  # black outline so white text reads on any background
+  shadow: 3                   # soft drop shadow
+  bold: true
+  box: false                  # no background box (clean look like the reference)
+  box_color: "&H90000000"     # AABBGGRR — used only when box: true
+
+brand:
+  logo_position: bottom-right   # bottom-right|bottom-left|top-right|top-left|bottom-center
+  logo_opacity: 1.0
+  logo_width_ratio: 0.18        # logo width as a fraction of the 1080px frame
+  # intro/outro/logo file paths live under paths: above (null = skipped)
 
 output:
   width: 1080

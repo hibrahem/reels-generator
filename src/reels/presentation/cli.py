@@ -15,6 +15,9 @@ from rich.table import Table
 
 from reels.application.pipeline import PipelineProgress, StageNotBuilt
 from reels.application.pipeline_stage import Stage
+from reels.application.run_options import RunOptions
+from reels.infrastructure.llm.clip_json import MalformedSelectionResponse
+from reels.infrastructure.llm.errors import SelectionUnavailable
 from reels.presentation.container import Container
 
 app = typer.Typer(
@@ -38,6 +41,10 @@ def run(
     to_stage: Annotated[
         Stage, typer.Option("--to", help="Stop after this stage.")
     ] = Stage.PACKAGE,
+    reel: Annotated[
+        list[int] | None,
+        typer.Option("--reel", help="Limit per-reel stages to these reel indices (repeatable)."),
+    ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
 ) -> None:
     """Run the pipeline over the configured input folder."""
@@ -45,15 +52,22 @@ def run(
     container = _load(config)
     _preflight(container, from_stage, to_stage)
 
+    options = RunOptions(reel_indices=frozenset(reel) if reel else None)
     console.rule(f"[bold]Running pipeline: {from_stage.value} → {to_stage.value}")
     try:
         manifests = container.orchestrator.run(
-            from_stage=from_stage, to_stage=to_stage, on_progress=_print_progress
+            from_stage=from_stage, to_stage=to_stage, on_progress=_print_progress, options=options
         )
     except StageNotBuilt as exc:
         console.print(f"\n[yellow]⏸  {exc}")
         console.print("[dim]This is expected — later pipeline slices are not built yet.")
         raise typer.Exit(code=0) from exc
+    except SelectionUnavailable as exc:
+        console.print(f"[red]✗ {exc}")
+        raise typer.Exit(code=1) from exc
+    except MalformedSelectionResponse as exc:
+        console.print(f"[red]✗ The selection model returned unparseable JSON: {exc}")
+        raise typer.Exit(code=1) from exc
     except FileNotFoundError as exc:
         console.print(f"[red]✗ {exc}")
         raise typer.Exit(code=1) from exc
@@ -101,13 +115,17 @@ def doctor(
     )
     _row(table, "font", settings.paths.font.exists(), str(settings.paths.font))
 
-    provider = settings.selection.provider
-    key_env = "OPENAI_API_KEY" if provider == "openai" else "ANTHROPIC_API_KEY"
+    prov = container.provider
+    table.add_row(
+        "selection",
+        "[green]ok",
+        f"{prov.provider} · model={prov.model}" + (f" · {prov.base_url}" if prov.base_url else ""),
+    )
     _row(
         table,
-        f"{provider} key",
-        bool(os.environ.get(key_env)),
-        f"${key_env} {'set' if os.environ.get(key_env) else 'NOT set'}",
+        f"{prov.provider} key",
+        bool(os.environ.get(prov.key_env)),
+        f"${prov.key_env} {'set' if os.environ.get(prov.key_env) else 'NOT set'}",
     )
 
     console.print(table)
@@ -166,9 +184,36 @@ def _print_summary(manifests: list) -> None:
             str(len(m.warnings)),
         )
     console.print(table)
+
+    reels = [(m, r) for m in manifests for r in m.reels]
+    if reels:
+        rt = Table(title="Selected reels", show_header=True, header_style="bold")
+        rt.add_column("#")
+        rt.add_column("Start–End")
+        rt.add_column("Dur")
+        rt.add_column("Conf")
+        rt.add_column("Title")
+        rt.add_column("Hook")
+        for _, r in reels:
+            tr = r.candidate.time_range
+            rt.add_row(
+                f"{r.index:02d}",
+                f"{_clock(tr.start)}–{_clock(tr.end)}",
+                f"{tr.duration:.0f}s",
+                f"{float(r.candidate.confidence):.2f}",
+                r.candidate.title[:30],
+                r.candidate.hook[:42],
+            )
+        console.print(rt)
+
     for m in manifests:
         for warning in m.warnings:
             console.print(f"[yellow]⚠ {m.source.id.value}: {warning}")
+
+
+def _clock(seconds: float) -> str:
+    m, s = divmod(int(seconds), 60)
+    return f"{m:02d}:{s:02d}"
 
 
 def _row(table: Table, name: str, ok: bool, detail: str) -> None:

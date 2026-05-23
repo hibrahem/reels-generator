@@ -22,9 +22,13 @@ __pycache__/
 # Whisper model cache
 /models/
 
+# Locally compiled ffmpeg (with libass) — not committed
+/vendor/
+
 # Secrets
 .env
 .env.*
+!.env.example
 
 # OS / editor
 .DS_Store
