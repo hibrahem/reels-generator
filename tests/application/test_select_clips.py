@@ -108,6 +108,22 @@ def test_zero_clips_is_valid():
     assert manifest.is_completed(Stage.SELECT)
 
 
+def test_rerun_does_not_accumulate_warnings_or_reels():
+    clips = [_candidate(10, 40, "A", 0.9), _candidate(35, 70, "B", 0.5)]  # B overlaps A → 1 warning
+    use_case = _use_case(clips)
+    manifest = _manifest()
+    manifest.flag("ingest: pre-existing warning from another stage")
+
+    use_case.execute(manifest)
+    first = list(manifest.warnings)
+    use_case.execute(manifest)  # re-run against the same (persisted) manifest
+
+    assert manifest.warnings == first  # select warnings replaced, not doubled
+    # warnings from other stages survive a select re-run:
+    assert "ingest: pre-existing warning from another stage" in manifest.warnings
+    assert [r.index for r in manifest.reels] == [1]  # reels rebuilt, not appended
+
+
 def test_output_filename_scheme():
     manifest = _use_case([_candidate(10, 40, "Domain Coupling!", 0.9)]).execute(_manifest())
     name = manifest.reels[0].output_filename()

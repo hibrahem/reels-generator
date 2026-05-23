@@ -13,7 +13,7 @@ from reels.domain.transcript.transcript import Transcript
 SELECTION_SYSTEM = """You are a senior short-form video editor for an educational channel.
 You receive the timestamped transcript of a long-form Arabic course lecture (Egyptian colloquial
 Arabic, with English technical terms mixed in) and pick the self-contained teaching moments that
-would work as standalone vertical reels (20–90 seconds).
+would work as standalone vertical reels.
 
 Rules:
 - Pick ONLY moments that make complete sense without surrounding context. A viewer who lands on the
@@ -21,7 +21,10 @@ Rules:
 - The number of clips is content-driven. Return as many genuinely strong moments as exist — and
   return an empty list if the source has none. Do not pad.
 - Clips MUST NOT overlap in time.
-- Each clip's duration must fall within the requested min/max window.
+- DURATION IS A HARD CONSTRAINT: every clip's (end - start) MUST be within the min/max window given
+  in the user message. Clips outside the window are discarded, so do not return them. If a strong
+  moment runs longer than the max, pick the single best self-contained sub-window that fits — do NOT
+  return whole topics or multi-minute spans.
 - start/end are in SECONDS (floats), measured from the beginning of the video, and must lie within
   the video duration. Align them to natural sentence boundaries from the transcript.
 - Write `hook` and `caption` in the SAME register as the source: Egyptian colloquial Arabic, keeping
@@ -41,8 +44,9 @@ Return ONLY the JSON object, no prose, no markdown fences."""
 def build_user_prompt(transcript: Transcript, constraints: SelectionConstraints) -> str:
     lines = [
         f"Video duration: {transcript.duration_seconds:.1f} seconds.",
-        f"Clip duration window: {constraints.min_clip_seconds:.0f}–"
-        f"{constraints.max_clip_seconds:.0f} seconds.",
+        f"HARD clip duration window: every clip must be between "
+        f"{constraints.min_clip_seconds:.0f} and {constraints.max_clip_seconds:.0f} seconds long. "
+        f"Reject your own picks that fall outside this range before answering.",
         "",
         "Transcript (each line: [start-end] text):",
     ]

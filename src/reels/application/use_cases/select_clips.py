@@ -18,6 +18,8 @@ from reels.domain.reel.reel import Reel
 from reels.domain.services.clip_reconciliation import ClipReconciliationService
 from reels.domain.shared.value_objects import TimeRange
 
+_WARNING_PREFIX = "select: "
+
 
 class CannotSelect(Exception):
     """Raised when selection cannot run (e.g. the video has not been transcribed)."""
@@ -35,9 +37,14 @@ class SelectClips:
         if manifest.transcript_path is None:
             raise CannotSelect(f"'{manifest.source.id}' has no transcript — run transcribe first")
 
+        # Re-running select must be idempotent: drop this stage's prior reels and warnings up front
+        # so they don't accumulate across runs (the manifest persists between runs).
+        manifest.reels = []
+        manifest.warnings = [w for w in manifest.warnings if not w.startswith(_WARNING_PREFIX)]
+
         transcript = self.transcripts.load(manifest.transcript_path)
         if not transcript.has_words():
-            manifest.flag("select: transcript has no word-level timings; cannot snap clip bounds")
+            manifest.flag(f"{_WARNING_PREFIX}transcript has no word-level timings; cannot snap")
 
         candidates = self.selector.select_clips(transcript, self.constraints)
         result = self.reconciliation.reconcile(
@@ -53,7 +60,7 @@ class SelectClips:
             for i, candidate in enumerate(result.accepted)
         ]
         for note in result.notes:
-            manifest.flag(f"select: {note}")
+            manifest.flag(f"{_WARNING_PREFIX}{note}")
         manifest.mark_completed(Stage.SELECT)
         self.manifests.save(manifest)
         return manifest
