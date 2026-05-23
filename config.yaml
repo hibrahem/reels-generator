@@ -1,0 +1,57 @@
+# Reels Pipeline configuration.
+# Secrets (API keys) are NEVER stored here — set them via environment variables:
+#   OPENAI_API_KEY   (when selection.provider = openai)
+#   ANTHROPIC_API_KEY (when selection.provider = claude)
+
+paths:
+  input_dir: ./input          # folder of long-form source course videos
+  output_dir: ./output        # finished reels + sidecar metadata land here
+  work_dir: ./work            # per-video working dirs (transcripts, manifests, intermediates)
+  intro: null                 # optional path to an intro clip (mp4) — wired at brand stage
+  outro: null                 # optional path to an outro clip (mp4)
+  logo: null                  # optional path to a logo overlay (png with alpha)
+  font: ./assets/fonts/NotoNaskhArabic-Regular.ttf  # Arabic-capable font for caption burn-in
+
+transcription:
+  backend: faster-whisper     # faster-whisper | whisperx
+  model_size: large-v3        # Arabic accuracy degrades noticeably on smaller models
+  device: auto                # auto | cpu | cuda  (Apple Silicon uses CPU via CTranslate2)
+  compute_type: auto          # auto | int8 | int8_float16 | float16 | float32
+  language: ar                # source language hint
+  beam_size: 5
+
+selection:
+  provider: openai            # openai | claude
+  model: gpt-4o               # selection model (text-only); claude default: claude-sonnet-4-6
+  temperature: 0.2
+  min_clip_seconds: 20
+  max_clip_seconds: 90
+  max_retries: 1              # retry once on malformed JSON
+
+layout:
+  mode_b_split_ratio: 0.5     # MODE B: fraction of vertical canvas given to slides (top)
+  detection_sample_interval_seconds: 2.0
+  default_fallback_crop: right # right | center | left — used when presenter detection fails
+  presenter_anchor: right     # source layout: presenter on the right side of the frame
+
+captions:
+  font_family: Noto Naskh Arabic
+  base_font_size: 64
+  active_font_size: 72
+  base_color: "&H00FFFFFF"    # libass BGR+alpha — white
+  active_color: "&H0000D7FF"  # amber highlight for the spoken word
+  position: bottom            # bottom | center
+  safe_margin_v: 220          # px from bottom edge so platform UI doesn't cover captions
+  safe_margin_h: 80           # px from left/right edges
+  max_words_per_line: 5
+  outline: 3
+  shadow: 1
+
+output:
+  width: 1080
+  height: 1920
+  video_codec: libx264
+  audio_codec: aac
+  video_bitrate: 8M
+  audio_bitrate: 192k
+  faststart: true

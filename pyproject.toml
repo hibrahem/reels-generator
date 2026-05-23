@@ -1,0 +1,56 @@
+[project]
+name = "reels-generator"
+version = "0.1.0"
+description = "Local-first CLI that turns long-form Arabic course videos into vertical (9:16) social reels."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "hibrahem" }]
+
+dependencies = [
+    # Config + domain/manifest validation
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "pyyaml>=6.0",
+    # Presentation (CLI)
+    "typer>=0.12",
+    "rich>=13.7",
+    # Transcription (slice 1)
+    "faster-whisper>=1.0.3",
+    # LLM selection (slice 2) — both providers built behind the port
+    "openai>=1.40",
+    "anthropic>=0.34",
+    # Presenter detection (slice: plan-layout)
+    "opencv-python-headless>=4.10",
+    "numpy>=1.26,<2.3",
+    # Arabic caption shaping (slice 4 — highest risk)
+    "arabic-reshaper>=3.0",
+    "python-bidi>=0.4.2",
+]
+
+[project.scripts]
+reels = "reels.presentation.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reels"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
