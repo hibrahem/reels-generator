@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+import json
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 
 from reels.application.queries.video_queries import ListVideos
 from reels.presentation.api.schemas import VideoDetailOut, VideoSummaryOut
@@ -13,6 +15,12 @@ from reels.presentation.api.state import AppState, get_state
 router = APIRouter()
 
 StateDep = Annotated[AppState, Depends(get_state)]
+
+
+def _video_mime(suffix: str) -> str:
+    return {".mov": "video/quicktime", ".webm": "video/webm", ".mkv": "video/x-matroska"}.get(
+        suffix.lower(), "video/mp4"
+    )
 
 
 @router.get("/videos", response_model=list[VideoSummaryOut])
@@ -37,3 +45,36 @@ def get_video(video_id: str, state: StateDep) -> VideoDetailOut:
     if manifest is None:
         raise HTTPException(status_code=404, detail=f"video '{video_id}' not found (not ingested?)")
     return VideoDetailOut.of(manifest, c.settings.paths.output_dir)
+
+
+@router.get("/videos/{video_id}/transcript")
+def get_transcript(video_id: str, state: StateDep) -> dict[str, Any]:
+    manifest = state.container.manifests.load(video_id)
+    if manifest is None or manifest.transcript_path is None:
+        raise HTTPException(status_code=404, detail="transcript not available — run transcribe")
+    return json.loads(manifest.transcript_path.read_text(encoding="utf-8"))
+
+
+@router.get("/videos/{video_id}/media")
+def get_media(video_id: str, state: StateDep) -> FileResponse:
+    manifest = state.container.manifests.load(video_id)
+    if manifest is None or not manifest.source.path.exists():
+        raise HTTPException(status_code=404, detail="source video not found")
+    # FileResponse honors the Range header (206), so the player can seek.
+    return FileResponse(manifest.source.path, media_type=_video_mime(manifest.source.path.suffix))
+
+
+@router.get("/videos/{video_id}/reels/{index}/media")
+def get_reel_media(video_id: str, index: int, state: StateDep) -> FileResponse:
+    c = state.container
+    manifest = c.manifests.load(video_id)
+    if manifest is None:
+        raise HTTPException(status_code=404, detail="video not found")
+    reel = next((r for r in manifest.reels if r.index == index), None)
+    if reel is None:
+        raise HTTPException(status_code=404, detail=f"reel {index} not found")
+    output = c.settings.paths.output_dir / reel.output_filename()
+    path = output if output.exists() else reel.final_path
+    if path is None or not path.exists():
+        raise HTTPException(status_code=404, detail=f"reel {index} not rendered yet")
+    return FileResponse(path, media_type="video/mp4")

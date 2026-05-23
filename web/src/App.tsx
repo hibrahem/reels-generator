@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Library } from "./components/Library";
 import { Doctor } from "./components/Doctor";
+import { VideoDetail } from "./components/VideoDetail";
 
 type Tab = "library" | "health";
 
@@ -35,18 +36,7 @@ export default function App() {
       <main className="mx-auto max-w-6xl px-6 py-8">
         {tab === "library" && !openId && <Library onOpen={setOpenId} />}
         {tab === "library" && openId && (
-          <div>
-            <button
-              onClick={() => setOpenId(null)}
-              className="mb-4 text-sm text-indigo-400 hover:text-indigo-300"
-            >
-              ← Back to library
-            </button>
-            <div className="rounded-xl border border-dashed border-zinc-700 p-10 text-center text-zinc-400">
-              Detail view for <span className="text-zinc-200">{openId}</span> — player, reels &
-              pipeline controls arrive in Slice 2.
-            </div>
-          </div>
+          <VideoDetail id={openId} onBack={() => setOpenId(null)} />
         )}
         {tab === "health" && <Doctor />}
       </main>

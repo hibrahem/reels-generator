@@ -53,6 +53,15 @@ export type VideoDetail = {
   reels: Reel[];
 };
 
+export type TranscriptWord = { text: string; start: number; end: number; probability: number | null };
+export type TranscriptSegment = { text: string; start: number; end: number; words: TranscriptWord[] };
+export type Transcript = {
+  source_id: string;
+  language: string;
+  duration_seconds: number;
+  segments: TranscriptSegment[];
+};
+
 export type DoctorCheck = { name: string; ok: boolean; detail: string };
 export type Doctor = { checks: DoctorCheck[] };
 
@@ -72,9 +81,20 @@ export const api = {
   listVideos: () => http<VideoSummary[]>("/videos"),
   scanVideos: () => http<VideoSummary[]>("/videos/scan", { method: "POST" }),
   getVideo: (id: string) => http<VideoDetail>(`/videos/${encodeURIComponent(id)}`),
+  getTranscript: (id: string) => http<Transcript>(`/videos/${encodeURIComponent(id)}/transcript`),
   doctor: () => http<Doctor>("/doctor"),
   getConfig: () => http<{ config: Record<string, unknown>; schema: unknown }>("/config"),
 };
+
+export const mediaUrl = (id: string) => `/api/videos/${encodeURIComponent(id)}/media`;
+export const reelMediaUrl = (id: string, index: number) =>
+  `/api/videos/${encodeURIComponent(id)}/reels/${index}/media`;
+
+export function fmtClock(s: number): string {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+}
 
 export const STAGES = [
   "ingest",
