@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Eye, Layers, Play } from "lucide-react";
 import { api, fmtClock, mediaUrl, STAGES, type Reel } from "../lib/api";
+import { Button } from "@/components/ui/button";
 import { ReelCard } from "./ReelCard";
 import { TranscriptView } from "./TranscriptView";
 import { JobProgress } from "./JobProgress";
@@ -78,67 +80,76 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
     void qc.invalidateQueries({ queryKey: ["videos"] });
   }
 
-  if (detail.isLoading) return <p className="text-zinc-400">Loading…</p>;
-  if (detail.error) return <p className="text-red-400">Failed: {String(detail.error)}</p>;
+  if (detail.isLoading) return <p className="text-muted-foreground">Loading…</p>;
+  if (detail.error) return <p className="text-destructive">Failed: {String(detail.error)}</p>;
   const d = detail.data!;
+
+  const selectClass =
+    "h-8 rounded-lg border border-input bg-background px-2 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
 
   return (
     <div>
-      <button onClick={onBack} className="mb-3 text-sm text-indigo-400 hover:text-indigo-300">
-        ← Library
+      <button
+        onClick={onBack}
+        className="mb-3 inline-flex items-center gap-1 rounded-md text-sm text-muted-foreground transition hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <ArrowLeft className="size-4" />
+        Library
       </button>
       <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h2 className="text-lg font-semibold text-zinc-100">{d.filename}</h2>
-        <span className="text-sm text-zinc-400">
+        <h2 className="font-heading text-xl font-semibold tracking-tight">{d.filename}</h2>
+        <span className="text-sm text-muted-foreground">
           {d.width}×{d.height} · {d.fps?.toFixed(0)}fps · {fmtClock(d.duration_seconds ?? 0)} ·{" "}
           {d.reels.length} reels
         </span>
       </div>
 
-      {/* Pipeline controls */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
-        <span className="text-sm text-zinc-400">Run</span>
+      {/* Pipeline controls (job trigger) */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
+        <span className="text-sm font-medium text-muted-foreground">Run</span>
         <select
           value={fromStage}
           onChange={(e) => setFromStage(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200"
+          className={selectClass}
         >
           {STAGES.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
-        <span className="text-sm text-zinc-500">→</span>
-        <select
-          value={toStage}
-          onChange={(e) => setToStage(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200"
-        >
+        <span className="text-sm text-muted-foreground">→</span>
+        <select value={toStage} onChange={(e) => setToStage(e.target.value)} className={selectClass}>
           {STAGES.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
-        <button
+        <Button
           onClick={() => start(api.runPipeline(id, { from_stage: fromStage, to_stage: toStage }))}
-          className="rounded-lg bg-indigo-600 px-3 py-1 text-sm font-medium text-white transition hover:bg-indigo-500"
         >
+          <Play />
           Run
-        </button>
-        <div className="mx-1 h-5 w-px bg-zinc-700" />
-        <button
+        </Button>
+        <div className="mx-1 h-5 w-px bg-border" />
+        <Button
+          variant="secondary"
           onClick={() =>
             start(api.runPipeline(id, { from_stage: "plan-layout", to_stage: "package" }))
           }
-          className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition hover:bg-zinc-700"
         >
+          <Layers />
           Process all reels
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="secondary"
           onClick={() => start(api.makePreview(id))}
-          className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition hover:bg-zinc-700"
           title="Transcode a browser-friendly preview (audio in Chrome)"
         >
+          <Eye />
           Generate preview
-        </button>
+        </Button>
       </div>
 
       {jobId && (
@@ -150,7 +161,7 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Player + bottom tabs */}
         <div className="min-w-0">
-          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-black">
+          <div className="overflow-hidden rounded-xl border border-border bg-black">
             <video
               ref={videoRef}
               src={mediaUrl(id)}
@@ -170,12 +181,12 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
             onSeek={(t) => seekTo(t, false)}
           />
 
-          <label className="mt-2 flex items-center gap-2 text-sm text-zinc-400">
+          <label className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
               checked={loopSpan}
               onChange={(e) => setLoopSpan(e.target.checked)}
-              className="accent-indigo-500"
+              className="accent-primary"
             />
             Loop the played span
           </label>
@@ -185,8 +196,10 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
               <button
                 key={t}
                 onClick={() => setBottomTab(t)}
-                className={`rounded-lg px-3 py-1.5 text-sm capitalize transition ${
-                  bottomTab === t ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition ${
+                  bottomTab === t
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 }`}
               >
                 {t}
@@ -203,15 +216,19 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
                   onSeek={(t) => seekTo(t)}
                 />
               ) : (
-                <p className="text-sm text-zinc-500">No transcript yet — run the transcribe stage.</p>
+                <p className="text-sm text-muted-foreground">
+                  No transcript yet — run the transcribe stage.
+                </p>
               ))}
             {bottomTab === "summary" && (
-              <div className="space-y-2 text-sm text-zinc-300">
+              <div className="space-y-2 text-sm text-foreground">
                 <p>Stages done: {d.completed_stages.join(", ") || "—"}</p>
                 {d.warnings.length > 0 && (
                   <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                    <p className="mb-1 font-medium text-amber-300">{d.warnings.length} warnings</p>
-                    <ul className="list-inside list-disc text-amber-200/80">
+                    <p className="mb-1 font-medium text-amber-600 dark:text-amber-300">
+                      {d.warnings.length} warnings
+                    </p>
+                    <ul className="list-inside list-disc text-amber-700/80 dark:text-amber-200/80">
                       {d.warnings.slice(0, 12).map((w, i) => (
                         <li key={i}>{w}</li>
                       ))}
@@ -225,12 +242,14 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
 
         {/* Reels panel */}
         <div className="min-w-0">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Reels ({d.reels.length})
           </h3>
           <div className="flex flex-col gap-3">
             {d.reels.length === 0 && (
-              <p className="text-sm text-zinc-500">No reels selected yet — run the select stage.</p>
+              <p className="text-sm text-muted-foreground">
+                No reels selected yet — run the select stage.
+              </p>
             )}
             {d.reels.map((r) => (
               <ReelCard
