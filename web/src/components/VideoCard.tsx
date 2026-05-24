@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { posterUrl, STAGES, type VideoSummary } from "../lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -10,7 +11,15 @@ function fmtDuration(s: number | null): string {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
-export function VideoCard({ video, onOpen }: { video: VideoSummary; onOpen: (id: string) => void }) {
+export function VideoCard({
+  video,
+  onOpen,
+  processing = false,
+}: {
+  video: VideoSummary;
+  onOpen: (id: string) => void;
+  processing?: boolean;
+}) {
   const done = new Set(video.completed_stages);
   return (
     <Card
@@ -24,8 +33,14 @@ export function VideoCard({ video, onOpen }: { video: VideoSummary; onOpen: (id:
           onOpen(video.id);
         }
       }}
-      className="cursor-pointer gap-0 py-0 transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="relative cursor-pointer gap-0 py-0 transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
+      {processing && (
+        <Badge className="absolute left-2 top-2 z-10 gap-1 shadow">
+          <Loader2 className="size-3 animate-spin" />
+          Processing
+        </Badge>
+      )}
       {video.ingested ? (
         <img
           src={posterUrl(video.id)}

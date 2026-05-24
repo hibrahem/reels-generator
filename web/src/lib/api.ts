@@ -110,9 +110,28 @@ export const api = {
     }),
   deleteReel: (id: string, index: number) =>
     http<VideoDetail>(`/videos/${encodeURIComponent(id)}/reels/${index}`, { method: "DELETE" }),
+  listJobs: (videoId?: string) =>
+    http<JobSummary[]>(`/jobs${videoId ? `?video_id=${encodeURIComponent(videoId)}` : ""}`),
 };
 
 export type JobEvent = { stage: string; source_id: string; message: string; ts: number };
+
+export type JobState = "queued" | "running" | "done" | "failed";
+
+export type JobSummary = {
+  id: string;
+  kind: string;
+  video_id: string;
+  from_stage: string | null;
+  to_stage: string | null;
+  reel_indices: number[] | null;
+  state: JobState;
+  error: string | null;
+  events: JobEvent[];
+};
+
+// A job is "active" (still doing work) when queued or running.
+export const isActiveJob = (j: JobSummary) => j.state === "queued" || j.state === "running";
 
 // Subscribe to a job's live progress via SSE. Returns a cleanup function.
 export function subscribeJob(
