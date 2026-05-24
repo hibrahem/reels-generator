@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Eye, Layers, Play } from "lucide-react";
 import { api, fmtClock, isActiveJob, mediaUrl, STAGES, type Reel } from "../lib/api";
@@ -35,8 +35,18 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
   });
   // Jobs come back newest-first; the first active one is the latest in-flight run.
   const activeJob = jobs.data?.find(isActiveJob);
-  // Prefer a locally-started job; otherwise reattach to the server's active job.
-  const shownJobId = jobId ?? activeJob?.id ?? null;
+  // Latch onto a reattached job so its JobProgress card persists through the
+  // terminal Done/Failed state — symmetric with the locally-started path, which
+  // keeps `jobId` set after completion. Without this, a post-refresh viewer's
+  // card would vanish the instant the job left the active set (GH-11).
+  const [reattachedJobId, setReattachedJobId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!jobId && activeJob && activeJob.id !== reattachedJobId) {
+      setReattachedJobId(activeJob.id);
+    }
+  }, [jobId, activeJob, reattachedJobId]);
+  // Prefer a locally-started job; otherwise the latched reattached job.
+  const shownJobId = jobId ?? reattachedJobId;
 
   function seekTo(t: number, play = true) {
     const v = videoRef.current;
