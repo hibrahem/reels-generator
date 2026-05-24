@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 type Cfg = Record<string, Record<string, unknown>>;
 
@@ -22,7 +23,8 @@ function Field({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
-  const base = "rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200";
+  const base =
+    "rounded-lg border border-input bg-background px-2 py-1 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
   let input;
   if (typeof value === "boolean") {
     input = (
@@ -30,7 +32,7 @@ function Field({
         type="checkbox"
         checked={value}
         onChange={(e) => onChange(e.target.checked)}
-        className="accent-indigo-500"
+        className="accent-primary"
       />
     );
   } else if (typeof value === "number") {
@@ -56,7 +58,7 @@ function Field({
   }
   return (
     <label className="flex items-center justify-between gap-4 py-1.5">
-      <span className="text-sm text-zinc-400">{label}</span>
+      <span className="text-sm text-muted-foreground">{label}</span>
       {input}
     </label>
   );
@@ -84,42 +86,40 @@ export function ConfigEditor() {
     },
   });
 
-  if (isLoading || !cfg) return <p className="text-zinc-400">Loading config…</p>;
-  if (error) return <p className="text-red-400">Failed: {String(error)}</p>;
+  if (isLoading || !cfg) return <p className="text-muted-foreground">Loading config…</p>;
+  if (error) return <p className="text-destructive">Failed: {String(error)}</p>;
 
   return (
     <div className="max-w-3xl">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-100">Configuration</h2>
+        <h2 className="font-heading text-2xl font-semibold tracking-tight">Configuration</h2>
         <div className="flex items-center gap-3">
-          {saved && <span className="text-sm text-emerald-400">Saved ✓</span>}
-          <button
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
-          >
+          {saved && (
+            <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved ✓</span>
+          )}
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving…" : "Save config.yaml"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {save.error && (
-        <pre className="mb-4 whitespace-pre-wrap rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-xs text-red-300">
+        <pre className="mb-4 whitespace-pre-wrap rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
           {String(save.error)}
         </pre>
       )}
-      <p className="mb-4 text-xs text-zinc-500">
-        Secrets (API keys) are read from <code className="text-zinc-300">.env</code> and are never
+      <p className="mb-4 text-xs text-muted-foreground">
+        Secrets (API keys) are read from <code className="text-foreground">.env</code> and are never
         shown or edited here.
       </p>
 
       <div className="space-y-4">
         {Object.entries(cfg).map(([section, fields]) => (
-          <details key={section} open className="rounded-xl border border-zinc-800 bg-zinc-900/40">
-            <summary className="cursor-pointer px-4 py-2 font-medium capitalize text-zinc-200">
+          <details key={section} open className="rounded-xl border border-border bg-card">
+            <summary className="cursor-pointer px-4 py-2 font-medium capitalize text-foreground">
               {section}
             </summary>
-            <div className="divide-y divide-zinc-800/70 px-4 pb-3">
+            <div className="divide-y divide-border/70 px-4 pb-3">
               {fields && typeof fields === "object" ? (
                 Object.entries(fields).map(([key, value]) => (
                   <Field
