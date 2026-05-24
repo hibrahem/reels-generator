@@ -1,5 +1,8 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { Download, Film } from "lucide-react";
 import { api, fmtClock, reelMediaUrl } from "../lib/api";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export function Gallery({ onOpen }: { onOpen: (id: string) => void }) {
   const videos = useQuery({ queryKey: ["videos"], queryFn: api.listVideos });
@@ -16,44 +19,59 @@ export function Gallery({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-zinc-100">Finished reels ({finished.length})</h2>
-      {videos.isLoading && <p className="text-zinc-400">Loading…</p>}
-      {!videos.isLoading && finished.length === 0 && (
-        <div className="rounded-xl border border-dashed border-zinc-700 p-10 text-center text-zinc-400">
-          No finished reels yet. Process some reels from a video's detail screen.
+      <div className="mb-6">
+        <h2 className="font-heading text-2xl font-semibold tracking-tight">Finished reels</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {finished.length} {finished.length === 1 ? "reel" : "reels"} ready to download
+        </p>
+      </div>
+
+      {videos.isLoading && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="aspect-[9/16] animate-pulse rounded-xl bg-muted/50" />
+          ))}
         </div>
       )}
+
+      {!videos.isLoading && finished.length === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border p-12 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <Film className="size-6" />
+          </span>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            No finished reels yet. Process some reels from a video&apos;s detail screen.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {finished.map(({ videoId, reel }) => (
-          <div key={`${videoId}-${reel.index}`} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
+          <Card key={`${videoId}-${reel.index}`} className="gap-2 p-2">
             <video
               src={reelMediaUrl(videoId, reel.index)}
               controls
               preload="metadata"
               className="aspect-[9/16] w-full rounded-lg bg-black"
             />
-            <div className="mt-2 px-1" dir="auto">
-              <p className="line-clamp-1 text-sm font-medium text-zinc-100">{reel.title}</p>
-              <p className="text-xs text-zinc-500" dir="ltr">
+            <div className="px-1" dir="auto">
+              <p className="line-clamp-1 text-sm font-medium">{reel.title}</p>
+              <p className="text-xs text-muted-foreground" dir="ltr">
                 {fmtClock(reel.start)}–{fmtClock(reel.end)} · conf {reel.confidence.toFixed(2)}
               </p>
             </div>
-            <div className="mt-2 flex gap-2 px-1" dir="ltr">
-              <a
-                href={reelMediaUrl(videoId, reel.index)}
-                download={reel.output_filename}
-                className="rounded-lg bg-indigo-600/80 px-2 py-1 text-xs text-white transition hover:bg-indigo-500"
-              >
-                Download
-              </a>
-              <button
-                onClick={() => onOpen(videoId)}
-                className="rounded-lg bg-zinc-800 px-2 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700"
-              >
+            <div className="flex gap-2 px-1" dir="ltr">
+              <Button asChild size="sm">
+                <a href={reelMediaUrl(videoId, reel.index)} download={reel.output_filename}>
+                  <Download />
+                  Download
+                </a>
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => onOpen(videoId)}>
                 Open video
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>
