@@ -41,4 +41,4 @@ Chosen: **in-memory reattach + poll**, because it delivers the user-visible requ
 
 - Ticket: `reels-generator#9`
 - Builds on AgDR-0001 (shadcn/ui) for the indicator/badge styling.
-- Implementation commit / PR: _TBD_
+- Implementation PR: hibrahem/reels-generator#10

@@ -78,7 +78,9 @@ export default function App() {
         {tab === "library" && !openId && (
           <Library onOpen={setOpenId} activeVideoIds={activeVideoIds} />
         )}
-        {tab === "library" && openId && <VideoDetail id={openId} onBack={() => setOpenId(null)} />}
+        {tab === "library" && openId && (
+          <VideoDetail key={openId} id={openId} onBack={() => setOpenId(null)} />
+        )}
         {tab === "gallery" && <Gallery onOpen={openVideo} />}
         {tab === "config" && <ConfigEditor />}
         {tab === "health" && <Doctor />}
