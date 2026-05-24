@@ -4,7 +4,13 @@ import { api } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { VideoCard } from "./VideoCard";
 
-export function Library({ onOpen }: { onOpen: (id: string) => void }) {
+export function Library({
+  onOpen,
+  activeVideoIds,
+}: {
+  onOpen: (id: string) => void;
+  activeVideoIds?: Set<string>;
+}) {
   const qc = useQueryClient();
   const { data, isLoading, error } = useQuery({ queryKey: ["videos"], queryFn: api.listVideos });
   const scan = useMutation({
@@ -57,7 +63,12 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
       {data && data.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((v) => (
-            <VideoCard key={v.id} video={v} onOpen={onOpen} />
+            <VideoCard
+              key={v.id}
+              video={v}
+              onOpen={onOpen}
+              processing={activeVideoIds?.has(v.id) ?? false}
+            />
           ))}
         </div>
       )}

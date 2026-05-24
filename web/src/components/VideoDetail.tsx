@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Eye, Layers, Play } from "lucide-react";
-import { api, fmtClock, mediaUrl, STAGES, type Reel } from "../lib/api";
+import { api, fmtClock, isActiveJob, mediaUrl, STAGES, type Reel } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { ReelCard } from "./ReelCard";
 import { TranscriptView } from "./TranscriptView";
@@ -26,6 +26,17 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
     queryFn: () => api.getTranscript(id),
     retry: false,
   });
+  // Reattach to a job already running for this video (survives refresh / re-navigation
+  // while the server is up). Poll only while something is active. See AgDR-0002.
+  const jobs = useQuery({
+    queryKey: ["jobs", id],
+    queryFn: () => api.listJobs(id),
+    refetchInterval: (q) => (q.state.data?.some(isActiveJob) ? 2000 : false),
+  });
+  // Jobs come back newest-first; the first active one is the latest in-flight run.
+  const activeJob = jobs.data?.find(isActiveJob);
+  // Prefer a locally-started job; otherwise reattach to the server's active job.
+  const shownJobId = jobId ?? activeJob?.id ?? null;
 
   function seekTo(t: number, play = true) {
     const v = videoRef.current;
@@ -72,12 +83,15 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
   async function start(promise: Promise<{ job_id: string }>) {
     const { job_id } = await promise;
     setJobId(job_id);
+    void qc.invalidateQueries({ queryKey: ["jobs"] }); // refresh detail reattach + global indicator
   }
 
   function onJobDone() {
     void qc.invalidateQueries({ queryKey: ["video", id] });
     void qc.invalidateQueries({ queryKey: ["transcript", id] });
     void qc.invalidateQueries({ queryKey: ["videos"] });
+    void qc.invalidateQueries({ queryKey: ["jobs", id] });
+    void qc.invalidateQueries({ queryKey: ["jobs"] });
   }
 
   if (detail.isLoading) return <p className="text-muted-foreground">Loading…</p>;
@@ -152,9 +166,9 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
         </Button>
       </div>
 
-      {jobId && (
+      {shownJobId && (
         <div className="mb-4">
-          <JobProgress jobId={jobId} onDone={onJobDone} />
+          <JobProgress key={shownJobId} jobId={shownJobId} onDone={onJobDone} />
         </div>
       )}
 
