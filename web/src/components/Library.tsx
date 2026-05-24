@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FolderSearch, RefreshCw } from "lucide-react";
 import { api } from "../lib/api";
+import { Button } from "@/components/ui/button";
 import { VideoCard } from "./VideoCard";
 
 export function Library({ onOpen }: { onOpen: (id: string) => void }) {
@@ -12,32 +14,53 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-100">Library</h2>
-        <button
-          onClick={() => scan.mutate()}
-          disabled={scan.isPending}
-          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
-        >
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h2 className="font-heading text-2xl font-semibold tracking-tight">Library</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data
+              ? `${data.length} source ${data.length === 1 ? "video" : "videos"} in the input folder`
+              : "Source videos in the input folder"}
+          </p>
+        </div>
+        <Button onClick={() => scan.mutate()} disabled={scan.isPending}>
+          <RefreshCw className={scan.isPending ? "animate-spin" : undefined} />
           {scan.isPending ? "Scanning…" : "Scan input folder"}
-        </button>
+        </Button>
       </div>
 
-      {isLoading && <p className="text-zinc-400">Loading…</p>}
-      {error && <p className="text-red-400">Failed to load: {String(error)}</p>}
-
-      {data && data.length === 0 && (
-        <div className="rounded-xl border border-dashed border-zinc-700 p-10 text-center text-zinc-400">
-          No videos found. Drop a video into the <code className="text-zinc-200">input/</code> folder,
-          then click <span className="text-zinc-200">Scan input folder</span>.
+      {isLoading && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-56 animate-pulse rounded-xl bg-muted/50" />
+          ))}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {data?.map((v) => (
-          <VideoCard key={v.id} video={v} onOpen={onOpen} />
-        ))}
-      </div>
+      {error && (
+        <p className="text-sm text-destructive">Failed to load: {String(error)}</p>
+      )}
+
+      {data && data.length === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border p-12 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <FolderSearch className="size-6" />
+          </span>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            No videos found. Drop a video into the{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">input/</code> folder,
+            then click <span className="text-foreground">Scan input folder</span>.
+          </p>
+        </div>
+      )}
+
+      {data && data.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {data.map((v) => (
+            <VideoCard key={v.id} video={v} onOpen={onOpen} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

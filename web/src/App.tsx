@@ -17,18 +17,20 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-200">
-      <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <button
             onClick={() => {
               setTab("library");
               setOpenId(null);
             }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <span className="text-xl">🎬</span>
-            <span className="font-semibold text-zinc-100">Reels Studio</span>
+            <span className="flex size-7 items-center justify-center rounded-md bg-primary/15 text-base">
+              🎬
+            </span>
+            <span className="font-heading font-semibold tracking-tight">Reels Studio</span>
           </button>
           <nav className="flex gap-1">
             {(["library", "gallery", "config", "health"] as Tab[]).map((t) => (
@@ -38,8 +40,10 @@ export default function App() {
                   setTab(t);
                   if (t !== "library") setOpenId(null);
                 }}
-                className={`rounded-lg px-3 py-1.5 text-sm capitalize transition ${
-                  tab === t ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition ${
+                  tab === t
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 }`}
               >
                 {t}
