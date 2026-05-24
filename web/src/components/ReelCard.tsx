@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Download, Eye, Pencil, Play, Settings2, Trash2 } from "lucide-react";
 import { api, fmtClock, reelMediaUrl, type Reel, type ReelStage, type VideoDetail } from "../lib/api";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const REEL_STAGES: ReelStage[] = ["plan-layout", "cut", "reframe", "caption", "brand", "package"];
 
 function ConfidenceBadge({ value }: { value: number }) {
   const tone =
-    value >= 0.85 ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-700/60 text-zinc-300";
-  return <span className={`rounded px-1.5 py-0.5 text-xs ${tone}`}>{value.toFixed(2)}</span>;
+    value >= 0.85
+      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+      : "bg-muted text-muted-foreground";
+  return <span className={cn("rounded px-1.5 py-0.5 text-xs", tone)}>{value.toFixed(2)}</span>;
 }
 
 export function ReelCard({
@@ -56,27 +61,29 @@ export function ReelCard({
     setEditing(true);
   }
 
-  const fieldCls = "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200";
+  const fieldCls =
+    "w-full rounded-lg border border-input bg-background px-2 py-1 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
 
   return (
     <div
       dir="rtl"
-      className={`rounded-xl border bg-zinc-900/60 p-3 transition ${
-        active ? "border-indigo-500" : "border-zinc-800"
-      }`}
+      className={cn(
+        "rounded-xl border bg-card p-3 transition",
+        active ? "border-primary" : "border-border",
+      )}
     >
       <div className="flex items-start justify-between gap-2" dir="ltr">
         <div className="flex items-center gap-2">
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-400">
+          <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
             {reel.index.toString().padStart(2, "0")}
           </span>
-          <span className="text-xs text-zinc-400">
+          <span className="text-xs text-muted-foreground">
             {fmtClock(reel.start)}–{fmtClock(reel.end)} · {reel.duration.toFixed(0)}s
           </span>
         </div>
         <div className="flex items-center gap-1">
           {reel.mode && (
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
               {reel.mode}
             </span>
           )}
@@ -86,16 +93,24 @@ export function ReelCard({
 
       {!editing ? (
         <>
-          <h4 className="mt-2 font-medium text-zinc-100" dir="auto">{reel.title}</h4>
-          {reel.hook && <p className="mt-1 text-sm text-zinc-300" dir="auto">{reel.hook}</p>}
+          <h4 className="mt-2 font-medium" dir="auto">
+            {reel.title}
+          </h4>
+          {reel.hook && (
+            <p className="mt-1 text-sm text-muted-foreground" dir="auto">
+              {reel.hook}
+            </p>
+          )}
           {reel.caption && (
-            <p className="mt-1 line-clamp-2 text-xs text-zinc-500" dir="auto">{reel.caption}</p>
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground" dir="auto">
+              {reel.caption}
+            </p>
           )}
         </>
       ) : (
         <div className="mt-2 space-y-2" dir="ltr">
           <div className="flex gap-2">
-            <label className="flex-1 text-xs text-zinc-400">
+            <label className="flex-1 text-xs text-muted-foreground">
               start (s)
               <input
                 type="number"
@@ -105,7 +120,7 @@ export function ReelCard({
                 className={fieldCls}
               />
             </label>
-            <label className="flex-1 text-xs text-zinc-400">
+            <label className="flex-1 text-xs text-muted-foreground">
               end (s)
               <input
                 type="number"
@@ -137,7 +152,7 @@ export function ReelCard({
             rows={2}
             className={fieldCls}
           />
-          <p className="text-[11px] text-zinc-500">
+          <p className="text-[11px] text-muted-foreground">
             Changing start/end re-snaps to word boundaries and clears this reel's renders.
           </p>
         </div>
@@ -148,9 +163,10 @@ export function ReelCard({
           <span
             key={s}
             title={s}
-            className={`rounded px-1.5 py-0.5 text-[10px] ${
-              reel.stages[s] ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-800 text-zinc-500"
-            }`}
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px]",
+              reel.stages[s] ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+            )}
           >
             {s}
           </span>
@@ -160,46 +176,52 @@ export function ReelCard({
       <div className="mt-3 flex flex-wrap gap-2" dir="ltr">
         {!editing ? (
           <>
-            <button onClick={onPlaySpan} className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700">
-              ▶ Play span
-            </button>
-            <button onClick={onProcess} className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700" title="Render this reel">
-              ⚙ Process
-            </button>
-            <button onClick={openEdit} className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700">
-              ✎ Edit
-            </button>
+            <Button size="sm" variant="secondary" onClick={onPlaySpan}>
+              <Play />
+              Play span
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onProcess} title="Render this reel">
+              <Settings2 />
+              Process
+            </Button>
+            <Button size="sm" variant="secondary" onClick={openEdit}>
+              <Pencil />
+              Edit
+            </Button>
             {packaged && (
-              <button onClick={() => setShowFinished((v) => !v)} className="rounded-lg bg-indigo-600/80 px-2.5 py-1 text-xs text-white transition hover:bg-indigo-500">
+              <Button size="sm" onClick={() => setShowFinished((v) => !v)}>
+                <Eye />
                 {showFinished ? "Hide reel" : "Preview reel"}
-              </button>
+              </Button>
             )}
             {packaged && (
-              <a
-                href={reelMediaUrl(videoId, reel.index)}
-                download={reel.output_filename}
-                className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700"
-              >
-                ↓ Download
-              </a>
+              <Button asChild size="sm" variant="secondary">
+                <a href={reelMediaUrl(videoId, reel.index)} download={reel.output_filename}>
+                  <Download />
+                  Download
+                </a>
+              </Button>
             )}
           </>
         ) : (
           <>
-            <button onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending} className="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs text-white transition hover:bg-indigo-500 disabled:opacity-50">
+            <Button size="sm" onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending}>
               {saveEdit.isPending ? "Saving…" : "Save"}
-            </button>
-            <button onClick={() => setEditing(false)} className="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 transition hover:bg-zinc-700">
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="ml-auto"
               onClick={() => {
                 if (confirm(`Delete reel ${reel.index}?`)) del.mutate();
               }}
-              className="ml-auto rounded-lg bg-red-600/80 px-2.5 py-1 text-xs text-white transition hover:bg-red-600"
             >
+              <Trash2 />
               Delete
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -208,7 +230,7 @@ export function ReelCard({
         <video
           src={reelMediaUrl(videoId, reel.index)}
           controls
-          className="mt-3 w-full rounded-lg border border-zinc-800 bg-black"
+          className="mt-3 w-full rounded-lg border border-border bg-black"
           style={{ maxHeight: 420 }}
         />
       )}

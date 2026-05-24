@@ -16,6 +16,7 @@ export function VideoCard({ video, onOpen }: { video: VideoSummary; onOpen: (id:
     <Card
       role="button"
       tabIndex={0}
+      aria-label={`Open ${video.filename}`}
       onClick={() => onOpen(video.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
