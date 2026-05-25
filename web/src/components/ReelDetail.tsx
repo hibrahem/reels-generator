@@ -203,7 +203,10 @@ export function ReelDetail({
                   step="0.1"
                   value={form.start}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, start: Math.min(Number(e.target.value), f.end - 0.1) }))
+                    setForm((f) => ({
+                      ...f,
+                      start: Math.max(0, Math.min(Number(e.target.value), f.end - 0.1)),
+                    }))
                   }
                   className={fieldCls}
                 />
@@ -215,7 +218,10 @@ export function ReelDetail({
                   step="0.1"
                   value={form.end}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, end: Math.max(Number(e.target.value), f.start + 0.1) }))
+                    setForm((f) => ({
+                      ...f,
+                      end: Math.min(total, Math.max(Number(e.target.value), f.start + 0.1)),
+                    }))
                   }
                   className={fieldCls}
                 />
