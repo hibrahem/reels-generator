@@ -298,8 +298,6 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
                 videoId={id}
                 reel={r}
                 active={activeReel === r.index}
-                onPlaySpan={() => playReel(r)}
-                onProcess={() => start(api.runReel(id, r.index))}
                 onOpen={() => setSelectedReel(r.index)}
               />
             ))}

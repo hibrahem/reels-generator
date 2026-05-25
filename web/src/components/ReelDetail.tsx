@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Download, Eye, Play, Scissors } from "lucide-react";
+import { ArrowLeft, Download, Eye, Play, Scissors, Trash2 } from "lucide-react";
 import {
   api,
   fmtClock,
@@ -101,6 +101,13 @@ export function ReelDetail({
   const saveEdit = useMutation({
     mutationFn: () => api.editReel(videoId, reel.index, form),
     onSuccess: onSaved,
+  });
+  const del = useMutation({
+    mutationFn: () => api.deleteReel(videoId, reel.index),
+    onSuccess: (updated) => {
+      onSaved(updated);
+      onBack(); // the reel is gone — return to the list
+    },
   });
 
   async function start(promise: Promise<{ job_id: string }>) {
@@ -313,6 +320,18 @@ export function ReelDetail({
                   Reset
                 </Button>
               )}
+              <Button
+                size="sm"
+                variant="destructive"
+                className="ml-auto"
+                disabled={del.isPending}
+                onClick={() => {
+                  if (confirm(`Delete reel ${reel.index}?`)) del.mutate();
+                }}
+              >
+                <Trash2 />
+                {del.isPending ? "Deleting…" : "Delete"}
+              </Button>
             </div>
             {saveEdit.error && (
               <p className="mt-2 text-xs text-destructive">{String(saveEdit.error)}</p>
