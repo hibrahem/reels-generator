@@ -1,5 +1,6 @@
-import { Maximize2 } from "lucide-react";
-import { fmtClock, type Reel, type ReelStage } from "../lib/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Maximize2, Trash2 } from "lucide-react";
+import { api, fmtClock, type Reel, type ReelStage, type VideoDetail } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -14,20 +15,31 @@ function ConfidenceBadge({ value }: { value: number }) {
 }
 
 /**
- * Compact, navigation-only reel card for the video's reel list. Clicking anywhere on the card
- * (or the Open button) opens the focused {@link ReelDetail} editor — all single-reel editing,
- * processing, stage redo, preview, and delete live there, not here.
+ * Compact reel card for the video's reel list. Clicking anywhere on the card (or the Open button)
+ * opens the focused {@link ReelDetail} editor, where trimming, processing, and stage redo live.
+ * A Delete action is kept here too, for quickly removing a reel without opening the editor.
  */
 export function ReelCard({
+  videoId,
   reel,
   active,
   onOpen,
 }: {
+  videoId: string;
   reel: Reel;
   active: boolean;
   /** Open the focused per-reel detail editor. */
   onOpen: () => void;
 }) {
+  const qc = useQueryClient();
+  const del = useMutation({
+    mutationFn: () => api.deleteReel(videoId, reel.index),
+    onSuccess: (updated: VideoDetail) => {
+      qc.setQueryData(["video", videoId], updated);
+      qc.invalidateQueries({ queryKey: ["videos"] });
+    },
+  });
+
   return (
     <div
       dir="rtl"
@@ -94,10 +106,24 @@ export function ReelCard({
         ))}
       </div>
 
-      <div className="mt-3" dir="ltr">
+      <div className="mt-3 flex gap-2" dir="ltr">
         <Button size="sm" onClick={onOpen} title="Open the focused reel editor">
           <Maximize2 />
           Open
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          className="ml-auto"
+          disabled={del.isPending}
+          title="Delete this reel"
+          onClick={(e) => {
+            e.stopPropagation(); // don't also open the detail view
+            if (confirm(`Delete reel ${reel.index}?`)) del.mutate();
+          }}
+        >
+          <Trash2 />
+          {del.isPending ? "Deleting…" : "Delete"}
         </Button>
       </div>
     </div>

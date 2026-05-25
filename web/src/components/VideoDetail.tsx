@@ -295,6 +295,7 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
             {d.reels.map((r) => (
               <ReelCard
                 key={r.index}
+                videoId={id}
                 reel={r}
                 active={activeReel === r.index}
                 onOpen={() => setSelectedReel(r.index)}
