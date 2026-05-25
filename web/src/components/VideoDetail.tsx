@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, Layers, Play } from "lucide-react";
 import { api, fmtClock, isActiveJob, mediaUrl, STAGES, type Reel } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { ReelCard } from "./ReelCard";
+import { ReelDetail } from "./ReelDetail";
 import { TranscriptView } from "./TranscriptView";
 import { JobProgress } from "./JobProgress";
 import { Timeline } from "./Timeline";
@@ -19,6 +20,7 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
   const [jobId, setJobId] = useState<string | null>(null);
   const [fromStage, setFromStage] = useState("plan-layout");
   const [toStage, setToStage] = useState("package");
+  const [selectedReel, setSelectedReel] = useState<number | null>(null);
 
   const detail = useQuery({ queryKey: ["video", id], queryFn: () => api.getVideo(id) });
   const transcript = useQuery({
@@ -107,6 +109,21 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
   if (detail.isLoading) return <p className="text-muted-foreground">Loading…</p>;
   if (detail.error) return <p className="text-destructive">Failed: {String(detail.error)}</p>;
   const d = detail.data!;
+
+  // A reel is selected → show the focused per-reel editor instead of the list.
+  const selected = selectedReel != null ? d.reels.find((r) => r.index === selectedReel) : undefined;
+  if (selected) {
+    return (
+      <ReelDetail
+        key={selected.index}
+        videoId={id}
+        reel={selected}
+        duration={d.duration_seconds ?? 0}
+        segments={transcript.data?.segments}
+        onBack={() => setSelectedReel(null)}
+      />
+    );
+  }
 
   const selectClass =
     "h-8 rounded-lg border border-input bg-background px-2 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
@@ -283,6 +300,7 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
                 active={activeReel === r.index}
                 onPlaySpan={() => playReel(r)}
                 onProcess={() => start(api.runReel(id, r.index))}
+                onOpen={() => setSelectedReel(r.index)}
               />
             ))}
           </div>
