@@ -52,6 +52,11 @@ class VideoEditor(ABC):
         intro: Path | None = None,
         outro: Path | None = None,
         logo: LogoOverlay | None = None,
+        ending_sound: Path | None = None,
     ) -> None:
-        """Prepend intro, append outro, overlay logo, normalized to the render spec (§5.8)."""
+        """Prepend intro, append outro, overlay logo, normalized to the render spec (§5.8).
+
+        ``ending_sound`` (if given) is an audio file mixed into the clip's tail so it ends as the
+        outro begins, over the original speech at a fixed reduced volume (see AgDR-0003).
+        """
         raise NotImplementedError

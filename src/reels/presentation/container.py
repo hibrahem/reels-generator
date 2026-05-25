@@ -151,6 +151,7 @@ class Container:
             intro=settings.paths.intro,
             outro=settings.paths.outro,
             logo=_logo_overlay(settings),
+            ending_sound=settings.paths.ending_sound,
         )
         package = PackageReels(
             sidecars=FileSidecarWriter(),
