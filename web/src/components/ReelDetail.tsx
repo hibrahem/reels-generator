@@ -344,11 +344,11 @@ export function ReelDetail({
             jobId={jobId}
             busy={running}
             onProcess={() => start(api.runReel(videoId, reel.index))}
-            onRedoStage={(stage: ReelStage) =>
+            onRedoStage={(stage: ReelStage, cascade: boolean) =>
               start(
                 api.runPipeline(videoId, {
                   from_stage: stage,
-                  to_stage: stage,
+                  to_stage: cascade ? "package" : stage,
                   reel_indices: [reel.index],
                 }),
               )
