@@ -44,6 +44,8 @@ class CaptionStyle:
 def build_ass(words: list[CaptionWord], style: CaptionStyle) -> str:
     lines = [_header(style), _styles(style), _events_header()]
 
+    grow = style.active_font_size != style.base_font_size
+
     for chunk in _chunk_words(words, style.max_words_per_line):
         start = chunk[0].start
         end = max(chunk[-1].end, start + 0.1)
@@ -51,13 +53,46 @@ def build_ass(words: list[CaptionWord], style: CaptionStyle) -> str:
         for i, word in enumerate(chunk):
             nxt = chunk[i + 1].start if i + 1 < len(chunk) else word.end
             dur_cs = max(1, round((nxt - word.start) * 100))  # karaoke unit = centiseconds
-            parts.append(f"{{\\k{dur_cs}}}{word.text}")
+            # \k drives the colour sweep (SecondaryColour -> PrimaryColour). It does NOT touch
+            # font size — ASS karaoke has no built-in "grow" effect, so to make the spoken word
+            # POP larger we animate \fs ourselves with \t (transform), timed to this word's window
+            # relative to the line start. Others stay at the style's base Fontsize.
+            override = f"\\k{dur_cs}"
+            if grow:
+                override += _grow_transform(style, word.start - start, nxt - start)
+            parts.append(f"{{{override}}}{word.text}")
         if style.reverse_word_order:
             # Emit reversed: after libass's RTL bidi this puts the first-spoken word on the left.
             parts.reverse()
         text = " ".join(parts)
         lines.append(f"Dialogue: 0,{_ts(start)},{_ts(end)},Default,,0,0,0,,{text}")
     return "\n".join(lines) + "\n"
+
+
+# Fraction of the word's spoken window spent ramping the size up (and, separately, back down).
+# Keeps the pop readable as a karaoke "bounce" rather than an instant jump.
+_GROW_RAMP = 0.25
+
+
+def _grow_transform(style: CaptionStyle, word_start: float, word_end: float) -> str:
+    r"""Animate this word's font size: base -> active during its window, then back to base.
+
+    Emits ``\fs<base>`` to anchor the resting size, then two ``\t(t1,t2,\fs<size>)`` transforms
+    (times are milliseconds from the LINE start). The first ramps up to ``active_font_size`` as the
+    word is sung; the second ramps back down so only the currently-spoken word is enlarged.
+    """
+    base, active = style.base_font_size, style.active_font_size
+    start_ms = max(0, round(word_start * 1000))
+    end_ms = max(start_ms + 1, round(word_end * 1000))
+    span = end_ms - start_ms
+    ramp = max(1, round(span * _GROW_RAMP))
+    up_end = start_ms + ramp
+    down_start = max(up_end, end_ms - ramp)
+    return (
+        f"\\fs{base}"
+        f"\\t({start_ms},{up_end},\\fs{active})"
+        f"\\t({down_start},{end_ms},\\fs{base})"
+    )
 
 
 def _chunk_words(words: list[CaptionWord], max_per_line: int) -> list[list[CaptionWord]]:

@@ -64,6 +64,54 @@ def test_reverse_word_order_flips_emission():
     assert reversed_.index("الموضوع") < reversed_.index("ريت")
 
 
+def test_active_word_grows_to_active_font_size():
+    # active (72) > base (64): each word must carry an \fs base anchor + a \t transform that
+    # ramps up to the active size and another that ramps back down — this is the size "pop".
+    words = [
+        CaptionWord("درس", 0.0, 0.4),
+        CaptionWord("اليوم", 0.4, 0.9),
+    ]
+    ass = build_ass(words, STYLE)
+    assert "\\fs64" in ass  # base anchor
+    assert "\\fs72" in ass  # active size reached during the word's window
+    # one up-ramp + one down-ramp transform per word
+    assert ass.count("\\t(") == 2 * len(words)
+    # the up-ramp transform animates toward the active size
+    assert "\\fs72)" in ass
+
+
+def test_grow_transform_timing_is_line_relative_milliseconds():
+    # second word starts at 0.4s -> 400ms from line start; karaoke window runs to 0.9s -> 900ms.
+    words = [
+        CaptionWord("درس", 0.0, 0.4),
+        CaptionWord("اليوم", 0.4, 0.9),
+    ]
+    ass = build_ass(words, STYLE)
+    # up-ramp for the second word begins at its 400ms line-relative offset
+    assert "\\t(400," in ass
+    # a down-ramp ends at the word's 900ms window close, returning to base size
+    assert ",900,\\fs64)" in ass
+
+
+def test_no_size_transform_when_active_equals_base():
+    import dataclasses
+
+    # base_color == active_color AND active_font_size == base_font_size: nothing to animate,
+    # so we emit no \t transforms (only the \k colour sweep, which is a no-op here too).
+    style = dataclasses.replace(STYLE, active_font_size=STYLE.base_font_size)
+    ass = build_ass([CaptionWord("درس", 0.0, 0.5)], style)
+    assert "\\t(" not in ass
+    assert "\\k" in ass  # karaoke timing still emitted
+
+
+def test_karaoke_and_size_override_coexist_per_word():
+    # each word block must contain BOTH the \k timing tag and the \fs size machinery.
+    words = [CaptionWord("درس", 0.0, 0.4), CaptionWord("اليوم", 0.4, 0.9)]
+    ass = build_ass(words, STYLE)
+    assert ass.count("\\k") == len(words)
+    assert ass.count("\\fs64\\t(") == len(words)  # base anchor immediately followed by transform
+
+
 def test_empty_words_still_valid_document():
     ass = build_ass([], STYLE)
     assert "[Events]" in ass
