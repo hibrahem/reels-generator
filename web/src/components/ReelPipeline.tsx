@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Play, RotateCw } from "lucide-react";
+import { CheckCircle2, ChevronsRight, Circle, Play, RotateCw } from "lucide-react";
 import { type Reel, type ReelStage } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { JobProgress } from "./JobProgress";
@@ -8,9 +8,12 @@ const REEL_STAGES: ReelStage[] = ["plan-layout", "cut", "reframe", "caption", "b
 
 /**
  * Per-reel pipeline view: the six reel-scoped stages as a vertical pipeline, each with its
- * completion status and a redo action that re-runs just that one stage for just this reel.
- * "Process this reel" runs the full plan-layout → package chain. Live progress streams via
- * the shared JobProgress card while a job is in flight.
+ * completion status and two redo actions for just this reel — "redo" re-runs only that one
+ * stage, while "redo to end" cascades from that stage through package so stale downstream
+ * outputs get regenerated too. The cascade action is hidden on the final (package) stage,
+ * where it would be identical to a single-stage redo. "Process this reel" runs the full
+ * plan-layout → package chain. Live progress streams via the shared JobProgress card while a
+ * job is in flight.
  */
 export function ReelPipeline({
   reel,
@@ -24,7 +27,7 @@ export function ReelPipeline({
   jobId: string | null;
   busy: boolean;
   onProcess: () => void;
-  onRedoStage: (stage: ReelStage) => void;
+  onRedoStage: (stage: ReelStage, cascade: boolean) => void;
   onJobDone: () => void;
 }) {
   return (
@@ -68,16 +71,30 @@ export function ReelPipeline({
               >
                 {stage}
               </span>
-              <button
-                type="button"
-                onClick={() => onRedoStage(stage)}
-                disabled={busy}
-                title={`Re-run the ${stage} stage for this reel`}
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
-              >
-                <RotateCw className="size-3" />
-                redo
-              </button>
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => onRedoStage(stage, false)}
+                  disabled={busy}
+                  title={`Re-run only the ${stage} stage for this reel`}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+                >
+                  <RotateCw className="size-3" />
+                  redo
+                </button>
+                {i < REEL_STAGES.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => onRedoStage(stage, true)}
+                    disabled={busy}
+                    title={`Re-run ${stage} and every stage after it (through package) for this reel`}
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+                  >
+                    <ChevronsRight className="size-3" />
+                    redo to end
+                  </button>
+                )}
+              </div>
             </li>
           );
         })}
