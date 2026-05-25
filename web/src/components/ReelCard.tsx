@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Download, Eye, Pencil, Play, Settings2, Trash2 } from "lucide-react";
+import { Download, Eye, Maximize2, Pencil, Play, Settings2, Trash2 } from "lucide-react";
 import { api, fmtClock, reelMediaUrl, type Reel, type ReelStage, type VideoDetail } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,12 +21,15 @@ export function ReelCard({
   active,
   onPlaySpan,
   onProcess,
+  onOpen,
 }: {
   videoId: string;
   reel: Reel;
   active: boolean;
   onPlaySpan: () => void;
   onProcess: () => void;
+  /** Open the focused per-reel detail editor. */
+  onOpen: () => void;
 }) {
   const qc = useQueryClient();
   const [showFinished, setShowFinished] = useState(false);
@@ -93,9 +96,15 @@ export function ReelCard({
 
       {!editing ? (
         <>
-          <h4 className="mt-2 font-medium" dir="auto">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="mt-2 block w-full text-right font-medium hover:text-primary"
+            dir="auto"
+            title="Open reel editor"
+          >
             {reel.title}
-          </h4>
+          </button>
           {reel.hook && (
             <p className="mt-1 text-sm text-muted-foreground" dir="auto">
               {reel.hook}
@@ -176,6 +185,10 @@ export function ReelCard({
       <div className="mt-3 flex flex-wrap gap-2" dir="ltr">
         {!editing ? (
           <>
+            <Button size="sm" onClick={onOpen} title="Open the focused reel editor">
+              <Maximize2 />
+              Open
+            </Button>
             <Button size="sm" variant="secondary" onClick={onPlaySpan}>
               <Play />
               Play span
