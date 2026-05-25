@@ -5,11 +5,12 @@ from __future__ import annotations
 import dataclasses
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from reels.application.manifest import Manifest
 from reels.application.queries.video_queries import VideoSummary
 from reels.domain.reel.reel import Reel
+from reels.domain.transcript.transcript import Segment, Word
 
 
 class VideoSummaryOut(BaseModel):
@@ -104,6 +105,46 @@ class VideoDetailOut(BaseModel):
             warnings=m.warnings,
             reels=[ReelOut.of(r, output_dir) for r in m.reels],
         )
+
+
+class WordIn(BaseModel):
+    """One edited word from the client. `text` may change; `start`/`end` must be preserved."""
+
+    text: str
+    start: float
+    end: float
+    probability: float | None = None
+
+    def to_domain(self) -> Word:
+        return Word(
+            text=self.text, start=self.start, end=self.end, probability=self.probability
+        )
+
+
+class SegmentIn(BaseModel):
+    """One edited segment with its words. Timings carry through unchanged; only text is edited."""
+
+    text: str
+    start: float
+    end: float
+    words: list[WordIn] = Field(default_factory=list)
+
+    def to_domain(self) -> Segment:
+        return Segment(
+            text=self.text,
+            start=self.start,
+            end=self.end,
+            words=tuple(w.to_domain() for w in self.words),
+        )
+
+
+class TranscriptEditIn(BaseModel):
+    """Body for PATCH /videos/{id}/transcript — the full edited segment list."""
+
+    segments: list[SegmentIn]
+
+    def to_domain_segments(self) -> list[Segment]:
+        return [s.to_domain() for s in self.segments]
 
 
 class DoctorCheck(BaseModel):

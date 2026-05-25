@@ -255,6 +255,7 @@ export function ReelDetail({
                 selEnd={form.end}
                 onSetStart={(t) => setForm((f) => ({ ...f, start: Math.min(t, f.end - 0.1) }))}
                 onSetEnd={(t) => setForm((f) => ({ ...f, end: Math.max(t, f.start + 0.1) }))}
+                videoId={videoId}
               />
             ) : (
               <p className="text-sm text-muted-foreground">

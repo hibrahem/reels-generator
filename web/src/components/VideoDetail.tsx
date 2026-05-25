@@ -255,6 +255,7 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
                   segments={transcript.data.segments}
                   currentTime={currentTime}
                   onSeek={(t) => seekTo(t)}
+                  videoId={id}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">
