@@ -82,6 +82,12 @@ export const api = {
   scanVideos: () => http<VideoSummary[]>("/videos/scan", { method: "POST" }),
   getVideo: (id: string) => http<VideoDetail>(`/videos/${encodeURIComponent(id)}`),
   getTranscript: (id: string) => http<Transcript>(`/videos/${encodeURIComponent(id)}/transcript`),
+  // Save word-level transcript edits. Server preserves each word's start/end (only text changes).
+  editTranscript: (id: string, segments: TranscriptSegment[]) =>
+    http<Transcript>(`/videos/${encodeURIComponent(id)}/transcript`, {
+      method: "PATCH",
+      body: JSON.stringify({ segments }),
+    }),
   doctor: () => http<Doctor>("/doctor"),
   getConfig: () => http<{ config: Record<string, unknown>; schema: unknown }>("/config"),
 

@@ -10,8 +10,13 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from reels.application.queries.video_queries import ListVideos
+from reels.application.use_cases.edit_transcript import (
+    EditTranscript,
+    TranscriptNotAvailable,
+    TranscriptStructureChanged,
+)
 from reels.application.use_cases.reel_editing import DeleteReel, EditReel, ReelNotFound
-from reels.presentation.api.schemas import VideoDetailOut, VideoSummaryOut
+from reels.presentation.api.schemas import TranscriptEditIn, VideoDetailOut, VideoSummaryOut
 from reels.presentation.api.state import AppState, get_state
 
 router = APIRouter()
@@ -91,6 +96,31 @@ def get_transcript(video_id: str, state: StateDep) -> dict[str, Any]:
     manifest = state.container.manifests.load(video_id)
     if manifest is None or manifest.transcript_path is None:
         raise HTTPException(status_code=404, detail="transcript not available — run transcribe")
+    return json.loads(manifest.transcript_path.read_text(encoding="utf-8"))
+
+
+@router.patch("/videos/{video_id}/transcript")
+def edit_transcript(
+    video_id: str, edit: TranscriptEditIn, state: StateDep
+) -> dict[str, Any]:
+    """Persist word-level transcript edits, preserving every word's timing.
+
+    The save path rejects any change to word/segment counts or start/end times; only the text of
+    words (and the convenience segment text) may change. Returns the edited transcript JSON.
+    """
+    c = state.container
+    manifest = c.manifests.load(video_id)
+    if manifest is None:
+        raise HTTPException(status_code=404, detail="video not found")
+    try:
+        EditTranscript(transcripts=c.transcripts).execute(
+            manifest, edit.to_domain_segments()
+        )
+    except TranscriptNotAvailable as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TranscriptStructureChanged as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    # Re-read the persisted file so the response matches exactly what callers will GET next.
     return json.loads(manifest.transcript_path.read_text(encoding="utf-8"))
 
 
