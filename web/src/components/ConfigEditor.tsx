@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { ColorField } from "@/components/ColorField";
+
+/** Color fields are detected generically by name so future settings get the picker for free. */
+function isColorField(key: string): boolean {
+  return key.endsWith("_color");
+}
 
 type Cfg = Record<string, Record<string, unknown>>;
 
@@ -121,19 +127,23 @@ export function ConfigEditor() {
             </summary>
             <div className="divide-y divide-border/70 px-4 pb-3">
               {fields && typeof fields === "object" ? (
-                Object.entries(fields).map(([key, value]) => (
-                  <Field
-                    key={key}
-                    label={key}
-                    value={value}
-                    onChange={(v) =>
-                      setCfg((prev) => ({
-                        ...prev!,
-                        [section]: { ...prev![section], [key]: v },
-                      }))
-                    }
-                  />
-                ))
+                Object.entries(fields).map(([key, value]) => {
+                  const onChange = (v: unknown) =>
+                    setCfg((prev) => ({
+                      ...prev!,
+                      [section]: { ...prev![section], [key]: v },
+                    }));
+                  return isColorField(key) ? (
+                    <ColorField
+                      key={key}
+                      label={key}
+                      value={typeof value === "string" ? value : value == null ? null : String(value)}
+                      onChange={onChange}
+                    />
+                  ) : (
+                    <Field key={key} label={key} value={value} onChange={onChange} />
+                  );
+                })
               ) : (
                 <Field
                   label={section}
