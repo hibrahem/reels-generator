@@ -19,6 +19,8 @@ class PathsConfig(BaseModel):
     work_dir: Path = Path("./work")
     intro: Path | None = None
     outro: Path | None = None
+    # Audio sting mixed into each reel's tail, ending as the outro begins (see AgDR-0003).
+    ending_sound: Path | None = None
     logo: Path | None = None
     font: Path
     ffmpeg: Path | None = None  # override the ffmpeg binary (e.g. a libass-enabled build)

@@ -23,6 +23,7 @@ class BrandReels:
     intro: Path | None = None
     outro: Path | None = None
     logo: LogoOverlay | None = None
+    ending_sound: Path | None = None
 
     def execute(self, manifest: Manifest, options: RunOptions | None = None) -> Manifest:
         final_dir = manifest.source.working_dir / "final"
@@ -31,7 +32,12 @@ class BrandReels:
                 raise CannotBrand(f"reel {reel.index} has not been captioned — run caption first")
             out_path = final_dir / f"reel_{reel.index:02d}.mp4"
             self.editor.brand(
-                reel.captioned_path, out_path, intro=self.intro, outro=self.outro, logo=self.logo
+                reel.captioned_path,
+                out_path,
+                intro=self.intro,
+                outro=self.outro,
+                logo=self.logo,
+                ending_sound=self.ending_sound,
             )
             reel.finalize(out_path)
 
