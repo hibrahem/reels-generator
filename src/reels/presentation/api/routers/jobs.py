@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from reels.application.pipeline_stage import Stage
-from reels.application.run_options import RunOptions
+from reels.application.run_options import RunOptions, resume_stage_for_reel
 from reels.presentation.api.jobs import Job, JobManager, Reporter
 from reels.presentation.api.state import AppState, get_state
 
@@ -92,7 +92,16 @@ def run_pipeline(video_id: str, req: RunRequest, state: StateDep, jobs: JobsDep)
 
 @router.post("/videos/{video_id}/reels/{index}/run")
 def run_reel(video_id: str, index: int, state: StateDep, jobs: JobsDep) -> dict[str, str]:
-    req = RunRequest(from_stage="plan-layout", to_stage="package", reel_indices=[index])
+    # Resume from the first stage this reel hasn't finished, so processing a reel that stopped
+    # after (say) caption picks up at brand instead of redoing the whole pipeline (GH-19).
+    manifest = state.container.manifests.load(video_id)
+    if manifest is None:
+        raise HTTPException(status_code=404, detail="video not found — ingest first")
+    reel = next((r for r in manifest.reels if r.index == index), None)
+    if reel is None:
+        raise HTTPException(status_code=404, detail=f"reel {index} not found")
+    from_stage = resume_stage_for_reel(reel, state.container.settings.paths.output_dir)
+    req = RunRequest(from_stage=from_stage.value, to_stage="package", reel_indices=[index])
     job = jobs.submit(
         kind="reel",
         video_id=video_id,

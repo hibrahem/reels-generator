@@ -33,7 +33,12 @@ export function ReelPipeline({
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Pipeline
         </h3>
-        <Button size="sm" onClick={onProcess} disabled={busy} title="Run all stages for this reel">
+        <Button
+          size="sm"
+          onClick={onProcess}
+          disabled={busy}
+          title="Resume from this reel's first unfinished stage (use a stage's redo to re-run just that one)"
+        >
           <Play />
           Process this reel
         </Button>
