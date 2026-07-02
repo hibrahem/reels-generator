@@ -31,7 +31,7 @@ uv run reels doctor
 # 5. Drop one or more source videos into ./input, then run the whole pipeline
 uv run reels run --config config.yaml
 
-# → finished reels land in ./output as {source}__NN__{slug}.mp4 (+ reels.json / reels.md)
+# → finished reels land in ./output as {source}__NN__{slug}.mp4 (+ {source}.reels.json / .reels.md)
 ```
 
 Prefer a browser UI? Jump to [Reels Studio](#web-app--reels-studio).
@@ -65,7 +65,9 @@ src/reels/
 
 ## Requirements
 
-- **macOS on Apple Silicon** (Intel falls back to CPU with a logged slowdown warning).
+- **Platform: macOS (Apple Silicon or Intel).** This is the only tested platform. The core pipeline
+  has no hard OS lock (transcription can even use CUDA), but setup assumes Homebrew, and the web app's
+  *Generate preview* feature requires Apple VideoToolbox — so Linux/Windows are unsupported and unverified.
 - **Python 3.12** (managed via [`uv`](https://docs.astral.sh/uv/)) — install uv with `brew install uv`.
 - **FFmpeg with libass** for subtitle burn-in (see the next section — Homebrew's build won't do).
 - **An LLM API key** for the clip-selection stage (DeepSeek by default — see [Selection provider](#selection-provider-clip-selection-stage)).
@@ -187,8 +189,8 @@ Finished reels and their manifests land in the **`output/`** folder (`paths.outp
 source video:
 
 - `{source}__NN__{slug}.mp4` — one file per reel (e.g. `Lecture-1__03__domain-coupling.mp4`).
-- `reels.json` — machine-readable manifest of every reel (spans, hook, captions, metadata).
-- `reels.md` — a human-readable index of the reels.
+- `{source}.reels.json` — machine-readable manifest of every reel (spans, hook, captions, metadata).
+- `{source}.reels.md` — a human-readable index of the reels.
 
 Intermediate artefacts (transcripts, cut clips, per-stage state) live in `work/` (`paths.work_dir`)
 and can be safely deleted to force a clean re-run. `output/`, `work/`, and `input/` are all gitignored.
@@ -244,7 +246,7 @@ Built in thin slices per spec §10, stopping at each human checkpoint:
 - [x] **Slice 2** — Select (LLM clip selection; DeepSeek/OpenAI/Claude; validated + reconciled).
 - [x] **Slice 3** — Cut + MODE A reframe (OpenCV presenter detection → 9:16 presenter crop; `--reel` filter).
 - [x] **Slice 4** — Arabic captions (word-by-word `{\k}` karaoke via libass; shaping/bidi/code-switch verified by the harness).
-- [x] **Slice 5** — Brand (intro/outro concat + logo overlay) + package (`{source}__NN__{slug}.mp4` + `reels.json`/`reels.md`).
+- [x] **Slice 5** — Brand (intro/outro concat + logo overlay) + package (`{source}__NN__{slug}.mp4` + `{source}.reels.json`/`.reels.md`).
 - [x] **Slice 6/7** — Loop over clips / folder (`reels run` processes all reels and all input videos; `--reel` narrows).
 - [ ] Slice 8 — MODE B (stacked slides + presenter).
 
