@@ -1,13 +1,42 @@
 # Reels Generator
 
-A **local-first** CLI that turns long-form Arabic course videos into a series of vertical (9:16)
-social reels. It transcribes each source video, uses an LLM to select self-contained teaching
-moments, then cuts, reframes, captions, and brands each clip.
+A **local-first** CLI (and optional web UI) that turns long-form Arabic course videos into a series
+of vertical (9:16) social reels. It transcribes each source video, uses an LLM to select
+self-contained teaching moments, then cuts, reframes, captions, and brands each clip.
 
 > No cloud video processing. No auto-publishing. Only transcript **text** is ever sent off-machine
 > (to the LLM provider for clip selection).
 
 See [`REELS PIPELINE SPEC.md`](./REELS%20PIPELINE%20SPEC.md) for the full product/technical spec.
+
+---
+
+## Quick Start
+
+For macOS on Apple Silicon. Full detail for each step is in the sections below.
+
+```bash
+# 1. Install Python deps (creates .venv)
+uv sync
+
+# 2. Build ffmpeg-with-libass into ./vendor (one-time, ~10–15 min — see "FFmpeg with libass")
+#    Homebrew's ffmpeg does NOT include libass, which the caption/brand stages need.
+
+# 3. Add your LLM key (only transcript TEXT is ever sent off-machine)
+cp .env.example .env        # then edit .env and paste your key
+
+# 4. Verify everything is wired up — do this FIRST, it fails fast with fixes
+uv run reels doctor
+
+# 5. Drop one or more source videos into ./input, then run the whole pipeline
+uv run reels run --config config.yaml
+
+# → finished reels land in ./output as {source}__NN__{slug}.mp4 (+ reels.json / reels.md)
+```
+
+Prefer a browser UI? Jump to [Reels Studio](#web-app--reels-studio).
+
+---
 
 ## Pipeline
 
@@ -16,7 +45,7 @@ ingest → transcribe → select (LLM) → plan-layout → cut → reframe → c
 ```
 
 Each stage reads a per-video JSON manifest, does its work, writes outputs, and updates the manifest.
-Any stage can be resumed with `--from <stage>`.
+Any stage can be resumed with `--from <stage>` (and stopped early with `--to <stage>`).
 
 ## Architecture
 
@@ -27,34 +56,61 @@ src/reels/
   domain/          # Entities, Value Objects, domain services, ports (zero framework deps)
   application/     # Use cases (one per stage) + pipeline orchestrator
   infrastructure/  # Adapters: ffprobe, faster-whisper, OpenAI/Claude, OpenCV, libass, config, persistence
-  presentation/    # Typer CLI + composition root (dependency wiring)
+  presentation/    # Typer CLI + FastAPI web adapter + composition root (dependency wiring)
 ```
 
 - Domain ports (`Transcriber`, `ClipSelector`, `PresenterDetector`, …) are defined inside the
   domain/application layers; infrastructure provides the implementations.
-- The CLI is the only composition root — it wires concrete adapters into use cases.
+- The CLI/web layer is the only composition root — it wires concrete adapters into use cases.
 
 ## Requirements
 
 - **macOS on Apple Silicon** (Intel falls back to CPU with a logged slowdown warning).
-- **Python 3.12** (managed via [`uv`](https://docs.astral.sh/uv/)).
-- **FFmpeg with libass** for subtitle burn-in.
+- **Python 3.12** (managed via [`uv`](https://docs.astral.sh/uv/)) — install uv with `brew install uv`.
+- **FFmpeg with libass** for subtitle burn-in (see the next section — Homebrew's build won't do).
+- **An LLM API key** for the clip-selection stage (DeepSeek by default — see [Selection provider](#selection-provider-clip-selection-stage)).
 
-  > ⚠️ The current Homebrew `ffmpeg` (8.x) ships **without libass** — and neither the core nor the
-  > `homebrew-ffmpeg` tap formula exposes a `--with-libass` option anymore. A libass-enabled build
-  > is required for the **caption** and **brand** stages (not for ingest/transcribe/cut/reframe).
-  >
-  > Compile one from source against Homebrew's libass (≈10–15 min), then point `paths.ffmpeg` at it:
-  >
-  > ```bash
-  > brew install libass x264 pkg-config
-  > # configure with --enable-gpl --enable-libx264 --enable-libass --enable-libfreetype \
-  > #   --enable-libfontconfig --enable-libfribidi --enable-libharfbuzz, install under ./vendor/ffmpeg
-  > ```
-  >
-  > Set `paths.ffmpeg: ./vendor/ffmpeg/bin/ffmpeg` in `config.yaml`. The CLI checks libass capability
-  > at startup and fails fast (with remediation) only when a stage that needs it actually runs;
-  > `reels doctor` shows the status.
+The repo ships the brand **assets** it needs — `assets/outro.mp4`, `assets/Riser.wav`, and the
+Arabic fonts under `assets/fonts/` are committed. Intro clip and logo are optional and `null` by
+default in `config.yaml`.
+
+## FFmpeg with libass
+
+The caption and brand stages burn Arabic subtitles in via **libass**. Homebrew's `ffmpeg` ships
+**without** libass, and neither the core nor the `homebrew-ffmpeg` tap exposes a `--with-libass`
+option anymore — so you compile one from source (once, ≈10–15 min). Ingest/transcribe/cut/reframe
+work without it; the CLI checks libass at startup and fails fast (with remediation) only when a stage
+that needs it runs. `reels doctor` shows the status.
+
+```bash
+# 1. Install the codec/text libraries ffmpeg links against
+brew install pkg-config x264 libass freetype fontconfig fribidi harfbuzz
+
+# 2. Fetch the ffmpeg source (vendor/ is gitignored, so this stays local)
+git clone --depth 1 --branch n7.1.1 https://github.com/FFmpeg/FFmpeg.git vendor/src
+cd vendor/src
+
+# 3. Configure it to install under ./vendor/ffmpeg with libass enabled
+./configure \
+  --prefix="$(cd ../.. && pwd)/vendor/ffmpeg" \
+  --enable-gpl --enable-version3 \
+  --enable-libx264 --enable-libass --enable-libfreetype \
+  --enable-libfontconfig --enable-libfribidi --enable-libharfbuzz \
+  --enable-videotoolbox --enable-audiotoolbox \
+  --disable-doc --disable-debug \
+  --extra-cflags=-I/opt/homebrew/include \
+  --extra-ldflags=-L/opt/homebrew/lib
+
+# 4. Build and install into ./vendor/ffmpeg
+make -j"$(sysctl -n hw.ncpu)" && make install
+cd ../..
+
+# 5. Confirm libass is baked in
+./vendor/ffmpeg/bin/ffmpeg -version | grep libass
+```
+
+`config.yaml` already points `paths.ffmpeg` at `vendor/ffmpeg/bin/ffmpeg`. Run `uv run reels doctor`
+to confirm the **ffmpeg libass** check reads `ok`.
 
 ## Setup
 
@@ -63,7 +119,11 @@ uv sync                       # creates .venv and installs everything
 
 # Provide your LLM key via a .env file (only transcript TEXT is ever sent):
 cp .env.example .env          # then edit .env and fill in your key
+
+uv run reels doctor           # verify config, ffmpeg+libass, key, fonts, input dir
 ```
+
+`reels doctor` is the fastest way to catch a broken setup — run it before your first pipeline.
 
 ### Selection provider (clip selection stage)
 
@@ -78,6 +138,21 @@ OpenAI-API-compatible — they differ only by `base_url` and key), so switching 
 
 The exact model id is whatever your account exposes — set `selection.model` (or `REELS_SELECTION_MODEL`
 in `.env`). You can also override the endpoint via `selection.base_url` / `REELS_SELECTION_BASE_URL`.
+
+> 💸 **Cost note:** the select stage sends transcript **text** (not video) to a paid LLM API. Cost
+> scales with transcript length — a full course video is typically a few cents per run. Nothing else
+> in the pipeline makes network calls.
+
+## Input
+
+Drop your source videos into the **`input/`** folder (configurable via `paths.input_dir` in
+`config.yaml`). `reels run` processes every video it finds there. Common container formats read by
+ffmpeg work — `.mov`, `.mp4`, `.mkv`. Source videos are gitignored, so they're never committed.
+
+```bash
+cp ~/Downloads/"Lecture 1.mov" input/
+uv run reels run
+```
 
 ## Usage
 
@@ -94,11 +169,29 @@ uv run reels run --from transcribe --to transcribe
 # Process only specific reels (per-reel stages):
 uv run reels run --from plan-layout --to package --reel 3 --reel 7
 
+# Verbose per-stage logging:
+uv run reels run -v
+
 # Inspect environment / dependency health:
 uv run reels doctor
 ```
 
+Stages, in order, for `--from` / `--to`:
+`ingest · transcribe · select · plan-layout · cut · reframe · caption · brand · package`.
+
 Configuration lives in [`config.yaml`](./config.yaml) (see spec §7). Secrets are env-vars only.
+
+## Output
+
+Finished reels and their manifests land in the **`output/`** folder (`paths.output_dir`), grouped per
+source video:
+
+- `{source}__NN__{slug}.mp4` — one file per reel (e.g. `Lecture-1__03__domain-coupling.mp4`).
+- `reels.json` — machine-readable manifest of every reel (spans, hook, captions, metadata).
+- `reels.md` — a human-readable index of the reels.
+
+Intermediate artefacts (transcripts, cut clips, per-stage state) live in `work/` (`paths.work_dir`)
+and can be safely deleted to force a clean re-run. `output/`, `work/`, and `input/` are all gitignored.
 
 ## Web app — Reels Studio
 
@@ -115,6 +208,8 @@ cd web && npm install && npm run build && cd ..
 uv run --extra web reels web  # → http://127.0.0.1:8000
 ```
 
+Bind elsewhere with `reels web --host 0.0.0.0 --port 9000` (and `--config <path>` like the CLI).
+
 What you can do in the browser:
 
 - **Library** — video cards with poster thumbnails + per-stage badges; scan the input folder.
@@ -128,6 +223,18 @@ What you can do in the browser:
 
 > Dev mode (hot reload): run `uv run --extra web reels web` in one terminal and `npm run dev` in
 > `web/` in another — Vite proxies `/api` to the backend at :8000.
+
+## Troubleshooting
+
+Run `uv run reels doctor` first — it flags most of these directly.
+
+| Symptom | Cause & fix |
+|---|---|
+| Caption/brand stage errors with a libass message | You're on a libass-less ffmpeg. Build one from source (see [FFmpeg with libass](#ffmpeg-with-libass)) and confirm `paths.ffmpeg` points at `vendor/ffmpeg/bin/ffmpeg`. |
+| `doctor` shows the selection key missing | `cp .env.example .env` and paste the key for your `selection.provider` (e.g. `DEEPSEEK_API_KEY`). |
+| `reels run` finds no videos | Put at least one `.mov`/`.mp4`/`.mkv` in `input/` (or your `paths.input_dir`). |
+| Transcription is very slow | On Intel Macs it falls back to CPU (logged). Lower `transcription.model_size` (e.g. `medium`) to trade accuracy for speed. |
+| Want to re-run cleanly | Delete the relevant `work/` state, or use `--from <stage>` to redo from a point. |
 
 ## Build status
 
