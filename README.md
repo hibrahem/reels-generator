@@ -1,6 +1,6 @@
 # Reels Generator
 
-A **local-first** CLI (and optional web UI) that turns long-form Arabic course videos into a series
+A **local-first** web app — **Reels Studio** — that turns long-form Arabic course videos into a series
 of vertical (9:16) social reels. It transcribes each source video, uses an LLM to select
 self-contained teaching moments, then cuts, reframes, captions, and brands each clip.
 
@@ -19,22 +19,24 @@ For macOS on Apple Silicon. Full detail for each step is in the sections below.
 # 1. Install Python deps (creates .venv)
 uv sync
 
-# 2. Build ffmpeg-with-libass into ./vendor (one-time, ~10–15 min — see "FFmpeg with libass")
+# 2. Build the Reels Studio SPA once (outputs web/dist, which the server serves)
+cd web && npm install && npm run build && cd ..
+
+# 3. Build ffmpeg-with-libass into ./vendor (one-time, ~10–15 min — see "FFmpeg with libass")
 #    Homebrew's ffmpeg does NOT include libass, which the caption/brand stages need.
 
-# 3. Add your LLM key (only transcript TEXT is ever sent off-machine)
+# 4. Add your LLM key (only transcript TEXT is ever sent off-machine)
 cp .env.example .env        # then edit .env and paste your key
 
-# 4. Verify everything is wired up — do this FIRST, it fails fast with fixes
+# 5. Verify everything is wired up — do this FIRST, it fails fast with fixes
 uv run reels doctor
 
-# 5. Drop one or more source videos into ./input, then run the whole pipeline
-uv run reels run --config config.yaml
+# 6. Drop one or more source videos into ./input, then launch the Studio
+uv run reels                # → http://127.0.0.1:8000
 
-# → finished reels land in ./output as {source}__NN__{slug}.mp4 (+ {source}.reels.json / .reels.md)
+# → run the pipeline from the Studio's Pipeline tab; finished reels land in ./output
+#   as {source}__NN__{slug}.mp4 (+ {source}.reels.json / {source}.reels.md)
 ```
-
-Prefer a browser UI? Jump to [Reels Studio](#web-app--reels-studio).
 
 ---
 
@@ -45,7 +47,8 @@ ingest → transcribe → select (LLM) → plan-layout → cut → reframe → c
 ```
 
 Each stage reads a per-video JSON manifest, does its work, writes outputs, and updates the manifest.
-Any stage can be resumed with `--from <stage>` (and stopped early with `--to <stage>`).
+Any stage range can be run or resumed from the Studio's **Pipeline** tab (equivalent to from/to
+stage selection), and any stage can be redone from the video page.
 
 ## Architecture
 
@@ -56,12 +59,12 @@ src/reels/
   domain/          # Entities, Value Objects, domain services, ports (zero framework deps)
   application/     # Use cases (one per stage) + pipeline orchestrator
   infrastructure/  # Adapters: ffprobe, faster-whisper, OpenAI/Claude, OpenCV, libass, config, persistence
-  presentation/    # Typer CLI + FastAPI web adapter + composition root (dependency wiring)
+  presentation/    # FastAPI web adapter + thin Typer launcher (reels / reels doctor) + composition root
 ```
 
 - Domain ports (`Transcriber`, `ClipSelector`, `PresenterDetector`, …) are defined inside the
   domain/application layers; infrastructure provides the implementations.
-- The CLI/web layer is the only composition root — it wires concrete adapters into use cases.
+- The presentation layer is the only composition root — it wires concrete adapters into use cases.
 
 ## Requirements
 
@@ -81,7 +84,7 @@ default in `config.yaml`.
 The caption and brand stages burn Arabic subtitles in via **libass**. Homebrew's `ffmpeg` ships
 **without** libass, and neither the core nor the `homebrew-ffmpeg` tap exposes a `--with-libass`
 option anymore — so you compile one from source (once, ≈10–15 min). Ingest/transcribe/cut/reframe
-work without it; the CLI checks libass at startup and fails fast (with remediation) only when a stage
+work without it; the pipeline checks libass and fails fast (with remediation) only when a stage
 that needs it runs. `reels doctor` shows the status.
 
 ```bash
@@ -118,6 +121,7 @@ to confirm the **ffmpeg libass** check reads `ok`.
 
 ```bash
 uv sync                       # creates .venv and installs everything
+cd web && npm install && npm run build && cd ..   # build the Studio SPA (served by the app)
 
 # Provide your LLM key via a .env file (only transcript TEXT is ever sent):
 cp .env.example .env          # then edit .env and fill in your key
@@ -148,38 +152,25 @@ in `.env`). You can also override the endpoint via `selection.base_url` / `REELS
 ## Input
 
 Drop your source videos into the **`input/`** folder (configurable via `paths.input_dir` in
-`config.yaml`). `reels run` processes every video it finds there. Common container formats read by
+`config.yaml`). The Studio's pipeline processes every video it finds there. Common container formats read by
 ffmpeg work — `.mov`, `.mp4`, `.mkv`. Source videos are gitignored, so they're never committed.
 
 ```bash
 cp ~/Downloads/"Lecture 1.mov" input/
-uv run reels run
+uv run reels
 ```
 
 ## Usage
 
 ```bash
-# Run the whole pipeline over the input folder:
-uv run reels run --config config.yaml
-
-# Resume from a specific stage (re-uses prior stage outputs from the manifest):
-uv run reels run --from select --config config.yaml
-
-# Resume between a range of stages (e.g. just transcribe):
-uv run reels run --from transcribe --to transcribe
-
-# Process only specific reels (per-reel stages):
-uv run reels run --from plan-layout --to package --reel 3 --reel 7
-
-# Verbose per-stage logging:
-uv run reels run -v
-
-# Inspect environment / dependency health:
-uv run reels doctor
+uv run reels                                  # launch Reels Studio → http://127.0.0.1:8000
+uv run reels --host 0.0.0.0 --port 9000       # bind elsewhere
+uv run reels --config path/to/config.yaml     # non-default config
+uv run reels doctor                           # inspect environment / dependency health
 ```
 
-Stages, in order, for `--from` / `--to`:
-`ingest · transcribe · select · plan-layout · cut · reframe · caption · brand · package`.
+Everything else — running stage ranges, single reels, resume/redo, editing — happens in the
+browser (see [Reels Studio](#web-app--reels-studio) below).
 
 Configuration lives in [`config.yaml`](./config.yaml) (see spec §7). Secrets are env-vars only.
 
@@ -198,19 +189,15 @@ and can be safely deleted to force a clean re-run. `output/`, `work/`, and `inpu
 ## Web app — Reels Studio
 
 A local browser UI to drive and visualize the whole pipeline (spec:
-[`WEB_APP_SPEC.md`](./WEB_APP_SPEC.md)). It's a FastAPI delivery adapter that reuses the same
-use cases as the CLI (no business logic in the web tier) plus a React/Vite SPA.
+[`WEB_APP_SPEC.md`](./WEB_APP_SPEC.md)). It's a FastAPI delivery adapter over the
+application-layer use cases (no business logic in the web tier) plus a React/Vite SPA.
 
 ```bash
-uv sync --extra web           # install the web dependencies (FastAPI, uvicorn, …)
-
 # Build the SPA once (outputs web/dist, which the server serves):
 cd web && npm install && npm run build && cd ..
 
-uv run --extra web reels web  # → http://127.0.0.1:8000
+uv run reels                  # → http://127.0.0.1:8000
 ```
-
-Bind elsewhere with `reels web --host 0.0.0.0 --port 9000` (and `--config <path>` like the CLI).
 
 What you can do in the browser:
 
@@ -223,7 +210,7 @@ What you can do in the browser:
 - **Gallery** — every finished reel with inline players and downloads.
 - **Generate preview** — transcodes a browser-friendly proxy so `.mov`/PCM sources play with audio in Chrome.
 
-> Dev mode (hot reload): run `uv run --extra web reels web` in one terminal and `npm run dev` in
+> Dev mode (hot reload): run `uv run reels` in one terminal and `npm run dev` in
 > `web/` in another — Vite proxies `/api` to the backend at :8000.
 
 ## Troubleshooting
@@ -234,9 +221,9 @@ Run `uv run reels doctor` first — it flags most of these directly.
 |---|---|
 | Caption/brand stage errors with a libass message | You're on a libass-less ffmpeg. Build one from source (see [FFmpeg with libass](#ffmpeg-with-libass)) and confirm `paths.ffmpeg` points at `vendor/ffmpeg/bin/ffmpeg`. |
 | `doctor` shows the selection key missing | `cp .env.example .env` and paste the key for your `selection.provider` (e.g. `DEEPSEEK_API_KEY`). |
-| `reels run` finds no videos | Put at least one `.mov`/`.mp4`/`.mkv` in `input/` (or your `paths.input_dir`). |
+| The pipeline finds no videos | Put at least one `.mov`/`.mp4`/`.mkv` in `input/` (or your `paths.input_dir`). |
 | Transcription is very slow | On Intel Macs it falls back to CPU (logged). Lower `transcription.model_size` (e.g. `medium`) to trade accuracy for speed. |
-| Want to re-run cleanly | Delete the relevant `work/` state, or use `--from <stage>` to redo from a point. |
+| Want to re-run cleanly | Delete the relevant `work/` state, or use the Studio's stage **redo** to re-run from a point. |
 
 ## Build status
 
@@ -247,7 +234,7 @@ Built in thin slices per spec §10, stopping at each human checkpoint:
 - [x] **Slice 3** — Cut + MODE A reframe (OpenCV presenter detection → 9:16 presenter crop; `--reel` filter).
 - [x] **Slice 4** — Arabic captions (word-by-word `{\k}` karaoke via libass; shaping/bidi/code-switch verified by the harness).
 - [x] **Slice 5** — Brand (intro/outro concat + logo overlay) + package (`{source}__NN__{slug}.mp4` + `{source}.reels.json`/`.reels.md`).
-- [x] **Slice 6/7** — Loop over clips / folder (`reels run` processes all reels and all input videos; `--reel` narrows).
+- [x] **Slice 6/7** — Loop over clips / folder (the pipeline processes all reels and all input videos; a single reel can be targeted).
 - [ ] Slice 8 — MODE B (stacked slides + presenter).
 
 Plus **Reels Studio** — the web UI (see above and [`WEB_APP_SPEC.md`](./WEB_APP_SPEC.md)).
