@@ -95,18 +95,16 @@ export function ConfigEditor() {
   if (isLoading || !cfg) return <p className="text-muted-foreground">Loading config…</p>;
   if (error) return <p className="text-destructive">Failed: {String(error)}</p>;
 
+  const dirty = data?.config != null && JSON.stringify(cfg) !== JSON.stringify(data.config);
+
   return (
-    <div className="max-w-3xl">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="max-w-3xl pb-20">
+      <div className="mb-4">
         <h2 className="font-heading text-2xl font-semibold tracking-tight">Configuration</h2>
-        <div className="flex items-center gap-3">
-          {saved && (
-            <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved ✓</span>
-          )}
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending ? "Saving…" : "Save config.yaml"}
-          </Button>
-        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Secrets (API keys) are read from <code className="text-foreground">.env</code> and are
+          never shown or edited here.
+        </p>
       </div>
 
       {save.error && (
@@ -114,16 +112,12 @@ export function ConfigEditor() {
           {String(save.error)}
         </pre>
       )}
-      <p className="mb-4 text-xs text-muted-foreground">
-        Secrets (API keys) are read from <code className="text-foreground">.env</code> and are never
-        shown or edited here.
-      </p>
 
       <div className="space-y-4">
         {Object.entries(cfg).map(([section, fields]) => (
           <details key={section} open className="rounded-xl border border-border bg-card">
-            <summary className="cursor-pointer px-4 py-2 font-medium capitalize text-foreground">
-              {section}
+            <summary className="cursor-pointer px-4 py-3 font-heading text-xs font-semibold uppercase tracking-wider text-primary">
+              {section.replace(/_/g, " ")}
             </summary>
             <div className="divide-y divide-border/70 px-4 pb-3">
               {fields && typeof fields === "object" ? (
@@ -155,6 +149,37 @@ export function ConfigEditor() {
           </details>
         ))}
       </div>
+
+      {/* Save bar — slides in only when there are unsaved edits */}
+      {(dirty || saved) && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-3">
+            <span className="text-sm text-muted-foreground">
+              {saved ? (
+                <span className="text-emerald-400">Saved ✓</span>
+              ) : (
+                "Unsaved changes to config.yaml"
+              )}
+            </span>
+            <div className="flex items-center gap-2">
+              {dirty && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setCfg(structuredClone(data!.config))}
+                  disabled={save.isPending}
+                >
+                  Discard
+                </Button>
+              )}
+              {dirty && (
+                <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                  {save.isPending ? "Saving…" : "Save config.yaml"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

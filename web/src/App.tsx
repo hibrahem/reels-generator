@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import {
+  Clapperboard,
+  Loader2,
+  MicOff,
+  MonitorPlay,
+  Settings2,
+  Stethoscope,
+} from "lucide-react";
 import { api, isActiveJob } from "./lib/api";
 import { Library } from "./components/Library";
 import { Doctor } from "./components/Doctor";
@@ -8,8 +15,17 @@ import { VideoDetail } from "./components/VideoDetail";
 import { ConfigEditor } from "./components/ConfigEditor";
 import { Gallery } from "./components/Gallery";
 import { SilenceRemover } from "./components/SilenceRemover";
+import { Logo } from "./components/Logo";
 
 type Tab = "library" | "gallery" | "silence" | "config" | "health";
+
+const TABS: { id: Tab; label: string; icon: typeof Clapperboard }[] = [
+  { id: "library", label: "Library", icon: Clapperboard },
+  { id: "gallery", label: "Gallery", icon: MonitorPlay },
+  { id: "silence", label: "Silence", icon: MicOff },
+  { id: "config", label: "Config", icon: Settings2 },
+  { id: "health", label: "Health", icon: Stethoscope },
+];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("library");
@@ -35,12 +51,12 @@ export default function App() {
               setTab("library");
               setOpenId(null);
             }}
-            className="flex items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="flex items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <span className="flex size-7 items-center justify-center rounded-md bg-primary/15 text-base">
-              🎬
+            <Logo className="size-6 text-primary" />
+            <span className="font-heading text-[15px] font-semibold tracking-tight">
+              Reels <span className="text-primary">Studio</span>
             </span>
-            <span className="font-heading font-semibold tracking-tight">Reels Studio</span>
           </button>
           <div className="flex items-center gap-3">
             {activeJobs.length > 0 && (
@@ -53,21 +69,22 @@ export default function App() {
                 {activeJobs.length} running
               </button>
             )}
-            <nav className="flex gap-1">
-              {(["library", "gallery", "silence", "config", "health"] as Tab[]).map((t) => (
+            <nav className="flex gap-0.5">
+              {TABS.map(({ id, label, icon: Icon }) => (
                 <button
-                  key={t}
+                  key={id}
                   onClick={() => {
-                    setTab(t);
-                    if (t !== "library") setOpenId(null);
+                    setTab(id);
+                    if (id !== "library") setOpenId(null);
                   }}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition ${
-                    tab === t
-                      ? "bg-secondary text-secondary-foreground"
+                  className={`relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                    tab === id
+                      ? "text-foreground after:absolute after:inset-x-2 after:-bottom-[9px] after:h-0.5 after:rounded-full after:bg-primary"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   }`}
                 >
-                  {t}
+                  <Icon className={`size-4 ${tab === id ? "text-primary" : ""}`} />
+                  {label}
                 </button>
               ))}
             </nav>

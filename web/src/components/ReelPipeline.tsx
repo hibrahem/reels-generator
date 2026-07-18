@@ -33,7 +33,7 @@ export function ReelPipeline({
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className="font-heading text-xs font-semibold uppercase tracking-wider text-primary">
           Pipeline
         </h3>
         <Button
@@ -77,10 +77,10 @@ export function ReelPipeline({
                   onClick={() => onRedoStage(stage, false)}
                   disabled={busy}
                   title={`Re-run only the ${stage} stage for this reel`}
-                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-primary/15 hover:text-primary disabled:opacity-40"
                 >
                   <RotateCw className="size-3" />
-                  redo
+                  Re-run
                 </button>
                 {i < REEL_STAGES.length - 1 && (
                   <button
@@ -88,10 +88,10 @@ export function ReelPipeline({
                     onClick={() => onRedoStage(stage, true)}
                     disabled={busy}
                     title={`Re-run ${stage} and every stage after it (through package) for this reel`}
-                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-primary/15 hover:text-primary disabled:opacity-40"
                   >
                     <ChevronsRight className="size-3" />
-                    redo to end
+                    Re-run from here
                   </button>
                 )}
               </div>

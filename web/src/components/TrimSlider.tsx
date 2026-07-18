@@ -73,7 +73,7 @@ export function TrimSlider({
         ref={trackRef}
         className="relative h-8 w-full rounded-lg border border-border bg-muted/40"
       >
-        {/* selected cut region (purple) */}
+        {/* selected cut region (amber) */}
         <div
           className="absolute top-0 h-full rounded-md bg-primary/30"
           style={{ left: `${pct(start)}%`, width: `${Math.max(pct(end) - pct(start), 0)}%` }}

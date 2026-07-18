@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Maximize2, Trash2 } from "lucide-react";
+import { Loader2, Maximize2, Trash2 } from "lucide-react";
 import { api, fmtClock, type Reel, type ReelStage, type VideoDetail } from "../lib/api";
 import { Button } from "@/components/ui/button";
+import { StageProgress } from "./StageProgress";
 import { cn } from "@/lib/utils";
 
 const REEL_STAGES: ReelStage[] = ["plan-layout", "cut", "reframe", "caption", "brand", "package"];
@@ -32,6 +33,7 @@ export function ReelCard({
   onOpen: () => void;
 }) {
   const qc = useQueryClient();
+  const doneStages = new Set(REEL_STAGES.filter((s) => reel.stages[s]));
   const del = useMutation({
     mutationFn: () => api.deleteReel(videoId, reel.index),
     onSuccess: (updated: VideoDetail) => {
@@ -91,30 +93,17 @@ export function ReelCard({
         </p>
       )}
 
-      <div className="mt-2 flex flex-wrap gap-1" dir="ltr">
-        {REEL_STAGES.map((s) => (
-          <span
-            key={s}
-            title={s}
-            className={cn(
-              "rounded px-1.5 py-0.5 text-[10px]",
-              reel.stages[s] ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
-            )}
-          >
-            {s}
-          </span>
-        ))}
-      </div>
+      <StageProgress stages={REEL_STAGES} done={doneStages} className="mt-3" />
 
-      <div className="mt-3 flex gap-2" dir="ltr">
+      <div className="mt-3 flex items-center gap-2" dir="ltr">
         <Button size="sm" onClick={onOpen} title="Open the focused reel editor">
           <Maximize2 />
           Open
         </Button>
         <Button
-          size="sm"
-          variant="destructive"
-          className="ml-auto"
+          size="icon-sm"
+          variant="ghost"
+          className="ml-auto text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
           disabled={del.isPending}
           title="Delete this reel"
           onClick={(e) => {
@@ -122,8 +111,7 @@ export function ReelCard({
             if (confirm(`Delete reel ${reel.index}?`)) del.mutate();
           }}
         >
-          <Trash2 />
-          {del.isPending ? "Deleting…" : "Delete"}
+          {del.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
         </Button>
       </div>
     </div>

@@ -169,7 +169,7 @@ export function ReelDetail({
             />
           </div>
 
-          {/* Full-duration overview with the cut shown as a purple band */}
+          {/* Full-duration overview with the cut shown as an amber band */}
           <div
             onClick={seekFromTrack}
             className="relative mt-3 h-8 w-full cursor-pointer rounded-lg border border-border bg-muted/40"
@@ -188,7 +188,9 @@ export function ReelDetail({
           {/* Zoomed dual-handle trim slider */}
           <div className="mt-3 rounded-xl border border-border bg-card p-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Trim</span>
+              <span className="font-heading text-xs font-semibold uppercase tracking-wider text-primary">
+                Trim
+              </span>
               <Button size="sm" variant="secondary" onClick={previewCut}>
                 <Play />
                 Preview cut
@@ -243,8 +245,13 @@ export function ReelDetail({
 
           {/* Transcript — click "start"/"end" on a segment to set the cut */}
           <div className="mt-4">
-            <p className="mb-2 text-sm font-medium text-muted-foreground">
-              Transcript {segments ? "— click start / end on a line to set the cut" : ""}
+            <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-wider text-primary">
+              Transcript{" "}
+              {segments && (
+                <span className="font-sans font-normal normal-case tracking-normal text-muted-foreground">
+                  — click start / end on a line to set the cut
+                </span>
+              )}
             </p>
             {segments ? (
               <TranscriptView
@@ -268,7 +275,7 @@ export function ReelDetail({
         {/* Metadata + pipeline */}
         <div className="min-w-0 space-y-4">
           <div className="rounded-xl border border-border bg-card p-4">
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3 className="mb-3 font-heading text-xs font-semibold uppercase tracking-wider text-primary">
               Details
             </h3>
             <div className="space-y-2" dir="ltr">
@@ -358,6 +365,9 @@ export function ReelDetail({
 
           {packaged && (
             <div className="rounded-xl border border-border bg-card p-4">
+              <h3 className="mb-3 font-heading text-xs font-semibold uppercase tracking-wider text-primary">
+                Output
+              </h3>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => setShowFinished((v) => !v)}>
                   <Eye />

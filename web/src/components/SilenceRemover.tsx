@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Download, Loader2, Scissors } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   fmtClock,
   getSilenceResult,
@@ -79,20 +80,23 @@ export function SilenceRemover() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="font-heading text-xl font-semibold">Silence Remover</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">Silence Remover</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Upload a video and get back a copy with the silent passages cut out. Separate from
           the reels pipeline.
         </p>
       </div>
 
-      <label className="block cursor-pointer rounded-xl border-2 border-dashed border-border p-8 text-center transition hover:border-primary/50">
+      <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-card/40 p-8 text-center transition hover:border-primary/50 hover:bg-primary/5">
         <input
           type="file"
           accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
           className="hidden"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
+        <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Scissors className="size-5" />
+        </span>
         {file ? (
           <span className="text-sm font-medium">{file.name}</span>
         ) : (
@@ -117,18 +121,10 @@ export function SilenceRemover() {
         ))}
       </div>
 
-      <button
-        onClick={start}
-        disabled={!file || phase === "running"}
-        className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
-      >
-        {phase === "running" ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Scissors className="size-4" />
-        )}
+      <Button onClick={start} disabled={!file || phase === "running"}>
+        {phase === "running" ? <Loader2 className="animate-spin" /> : <Scissors />}
         Remove silence
-      </button>
+      </Button>
 
       {phase === "running" && <p className="text-sm text-muted-foreground">{message}</p>}
       {phase === "failed" && error && (
@@ -147,14 +143,12 @@ export function SilenceRemover() {
               {fmtClock(result.output_duration)}
             </p>
           )}
-          <a
-            href={silenceDownloadUrl(token)}
-            download={result.output_filename}
-            className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80"
-          >
-            <Download className="size-4" />
-            Download {result.output_filename}
-          </a>
+          <Button asChild variant="secondary">
+            <a href={silenceDownloadUrl(token)} download={result.output_filename}>
+              <Download />
+              Download {result.output_filename}
+            </a>
+          </Button>
         </div>
       )}
     </div>

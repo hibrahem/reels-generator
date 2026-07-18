@@ -146,27 +146,40 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
       </div>
 
       {/* Pipeline controls (job trigger) */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3">
-        <span className="text-sm font-medium text-muted-foreground">Run</span>
-        <select
-          value={fromStage}
-          onChange={(e) => setFromStage(e.target.value)}
-          className={selectClass}
-        >
-          {STAGES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <span className="text-sm text-muted-foreground">→</span>
-        <select value={toStage} onChange={(e) => setToStage(e.target.value)} className={selectClass}>
-          {STAGES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+        <span className="font-heading text-xs font-semibold uppercase tracking-wider text-primary">
+          Pipeline
+        </span>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            from
+            <select
+              value={fromStage}
+              onChange={(e) => setFromStage(e.target.value)}
+              className={selectClass}
+            >
+              {STAGES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            to
+            <select
+              value={toStage}
+              onChange={(e) => setToStage(e.target.value)}
+              className={selectClass}
+            >
+              {STAGES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <Button
           onClick={() => start(api.runPipeline(id, { from_stage: fromStage, to_stage: toStage }))}
         >
@@ -266,11 +279,9 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
               <div className="space-y-2 text-sm text-foreground">
                 <p>Stages done: {d.completed_stages.join(", ") || "—"}</p>
                 {d.warnings.length > 0 && (
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                    <p className="mb-1 font-medium text-amber-600 dark:text-amber-300">
-                      {d.warnings.length} warnings
-                    </p>
-                    <ul className="list-inside list-disc text-amber-700/80 dark:text-amber-200/80">
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <p className="mb-1 font-medium text-primary">{d.warnings.length} warnings</p>
+                    <ul className="list-inside list-disc text-muted-foreground">
                       {d.warnings.slice(0, 12).map((w, i) => (
                         <li key={i}>{w}</li>
                       ))}
@@ -284,8 +295,8 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
 
         {/* Reels panel */}
         <div className="min-w-0">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Reels ({d.reels.length})
+          <h3 className="mb-3 font-heading text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Reels <span className="text-primary">({d.reels.length})</span>
           </h3>
           <div className="flex flex-col gap-3">
             {d.reels.length === 0 && (

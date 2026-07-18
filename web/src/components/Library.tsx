@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderSearch, RefreshCw } from "lucide-react";
 import { api } from "../lib/api";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "./EmptyState";
 import { VideoCard } from "./VideoCard";
 
 export function Library({
@@ -48,16 +49,11 @@ export function Library({
       )}
 
       {data && data.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border p-12 text-center">
-          <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <FolderSearch className="size-6" />
-          </span>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            No videos found. Drop a video into the{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">input/</code> folder,
-            then click <span className="text-foreground">Scan input folder</span>.
-          </p>
-        </div>
+        <EmptyState icon={FolderSearch}>
+          No videos found. Drop a video into the{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">input/</code> folder,
+          then click <span className="text-foreground">Scan input folder</span>.
+        </EmptyState>
       )}
 
       {data && data.length > 0 && (
