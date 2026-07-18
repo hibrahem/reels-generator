@@ -171,6 +171,48 @@ export function fmtClock(s: number): string {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
+// --- Silence Remover tool (standalone from the reels pipeline) ---
+
+export type SilenceResult = {
+  original_duration: number;
+  output_duration: number;
+  cuts_removed: number;
+  output_filename: string;
+};
+
+export type SilenceSettings = {
+  threshold_db: number;
+  min_silence: number;
+  padding: number;
+};
+
+export const SILENCE_DEFAULTS: SilenceSettings = {
+  threshold_db: -35,
+  min_silence: 0.6,
+  padding: 0.15,
+};
+
+export async function removeSilence(
+  file: File,
+  settings: SilenceSettings,
+): Promise<{ job_id: string; token: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("threshold_db", String(settings.threshold_db));
+  form.append("min_silence", String(settings.min_silence));
+  form.append("padding", String(settings.padding));
+  // No Content-Type header: the browser sets the multipart boundary.
+  const res = await fetch("/api/silence/jobs", { method: "POST", body: form });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+  return res.json();
+}
+
+export const getSilenceResult = (token: string) =>
+  http<SilenceResult>(`/silence/jobs/${encodeURIComponent(token)}/result`);
+
+export const silenceDownloadUrl = (token: string) =>
+  `/api/silence/jobs/${encodeURIComponent(token)}/download`;
+
 export const STAGES = [
   "ingest",
   "transcribe",

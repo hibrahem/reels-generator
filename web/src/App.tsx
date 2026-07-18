@@ -7,8 +7,9 @@ import { Doctor } from "./components/Doctor";
 import { VideoDetail } from "./components/VideoDetail";
 import { ConfigEditor } from "./components/ConfigEditor";
 import { Gallery } from "./components/Gallery";
+import { SilenceRemover } from "./components/SilenceRemover";
 
-type Tab = "library" | "gallery" | "config" | "health";
+type Tab = "library" | "gallery" | "silence" | "config" | "health";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("library");
@@ -53,7 +54,7 @@ export default function App() {
               </button>
             )}
             <nav className="flex gap-1">
-              {(["library", "gallery", "config", "health"] as Tab[]).map((t) => (
+              {(["library", "gallery", "silence", "config", "health"] as Tab[]).map((t) => (
                 <button
                   key={t}
                   onClick={() => {
@@ -82,6 +83,7 @@ export default function App() {
           <VideoDetail key={openId} id={openId} onBack={() => setOpenId(null)} />
         )}
         {tab === "gallery" && <Gallery onOpen={openVideo} />}
+        {tab === "silence" && <SilenceRemover />}
         {tab === "config" && <ConfigEditor />}
         {tab === "health" && <Doctor />}
       </main>
