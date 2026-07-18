@@ -41,6 +41,7 @@ web = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=8.2",
     "ruff>=0.5",
 ]

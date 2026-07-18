@@ -22,6 +22,7 @@ from reels.application.use_cases.ingest_videos import IngestVideos
 from reels.application.use_cases.package_reels import PackageReels
 from reels.application.use_cases.plan_layout import PlanLayout
 from reels.application.use_cases.reframe_clips import ReframeClips
+from reels.application.use_cases.remove_silence import RemoveSilence
 from reels.application.use_cases.select_clips import SelectClips
 from reels.application.use_cases.transcribe_video import TranscribeVideo
 from reels.domain.reel.clip_selector import ClipSelector, SelectionConstraints
@@ -34,6 +35,8 @@ from reels.infrastructure.captions.libass_caption_renderer import LibassCaptionR
 from reels.infrastructure.config.settings import Settings, load_settings
 from reels.infrastructure.detection.opencv_presenter_detector import OpenCVPresenterDetector
 from reels.infrastructure.ffmpeg.ffmpeg_media_environment import FFmpegMediaEnvironment
+from reels.infrastructure.ffmpeg.ffmpeg_segment_cutter import FFmpegSegmentCutter
+from reels.infrastructure.ffmpeg.ffmpeg_silence_detector import FFmpegSilenceDetector
 from reels.infrastructure.ffmpeg.ffmpeg_video_editor import FFmpegVideoEditor
 from reels.infrastructure.ffmpeg.ffprobe_video_prober import FFprobeVideoProber
 from reels.infrastructure.llm.errors import SelectionUnavailable
@@ -69,6 +72,7 @@ class Container:
     manifests: JsonManifestRepository
     library: FilesystemVideoLibrary
     transcripts: JsonTranscriptRepository
+    silence_remover: RemoveSilence
 
     @classmethod
     def from_config(cls, config_path: Path) -> Container:
@@ -122,6 +126,11 @@ class Container:
             faststart=settings.output.faststart,
         )
         editor = FFmpegVideoEditor(render_spec, ffmpeg_path=ffmpeg_path)
+        silence_remover = RemoveSilence(
+            prober=prober,
+            detector=FFmpegSilenceDetector(ffmpeg_path=ffmpeg_path),
+            cutter=FFmpegSegmentCutter(ffmpeg_path=ffmpeg_path),
+        )
         caption_renderer = LibassCaptionRenderer(
             style=_caption_style(settings),
             fonts_dir=settings.paths.font.parent,
@@ -179,6 +188,7 @@ class Container:
             manifests=manifests,
             library=library,
             transcripts=transcripts,
+            silence_remover=silence_remover,
         )
 
 
