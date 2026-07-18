@@ -75,9 +75,11 @@ src/reels/
 - **FFmpeg with libass** for subtitle burn-in (see the next section — Homebrew's build won't do).
 - **An LLM API key** for the clip-selection stage (DeepSeek by default — see [Selection provider](#selection-provider-clip-selection-stage)).
 
-The repo ships the brand **assets** it needs — `assets/outro.mp4`, `assets/Riser.wav`, and the
-Arabic fonts under `assets/fonts/` are committed. Intro clip and logo are optional and `null` by
-default in `config.yaml`.
+The repo ships only the Arabic **fonts** under `assets/fonts/`. Brand media — intro/outro clips,
+logo, ending sound — are **yours to supply** and are never committed: they're optional and `null`
+by default in `config.yaml`. To use them, drop your files somewhere local (e.g. `assets/outro.mp4`
+— anything under `assets/` besides fonts is gitignored) and point `paths.outro` / `paths.logo` /
+`paths.ending_sound` at them.
 
 ## FFmpeg with libass
 

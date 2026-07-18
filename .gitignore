@@ -35,8 +35,9 @@ __pycache__/
 .idea/
 .vscode/
 
-# Allow sample assets and configs to be committed
-!assets/**
+# Allow fonts and configs to be committed — personal brand media (mp4/wav/…)
+# under assets/ stays ignored so the repo remains agnostic
+!assets/fonts/**
 !config.yaml
 !config.example.yaml
 
