@@ -1,7 +1,7 @@
 [project]
 name = "reels-generator"
 version = "0.1.0"
-description = "Local-first CLI that turns long-form Arabic course videos into vertical (9:16) social reels."
+description = "Local-first web app that turns long-form Arabic course videos into vertical (9:16) social reels."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "MIT" }
@@ -12,7 +12,7 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "pyyaml>=6.0",
-    # Presentation (CLI)
+    # Presentation (CLI launcher + terminal doctor)
     "typer>=0.12",
     "rich>=13.7",
     # Transcription (slice 1)
@@ -26,18 +26,15 @@ dependencies = [
     # Arabic caption shaping (slice 4 — highest risk)
     "arabic-reshaper>=3.0",
     "python-bidi>=0.4.2",
-]
-
-[project.scripts]
-reels = "reels.presentation.cli:app"
-
-[project.optional-dependencies]
-web = [
+    # Presentation (web — Reels Studio, the only pipeline interface)
     "fastapi>=0.115",
     "python-multipart>=0.0.9",
     "sse-starlette>=2.1",
     "uvicorn[standard]>=0.30",
 ]
+
+[project.scripts]
+reels = "reels.presentation.cli:app"
 
 [dependency-groups]
 dev = [
