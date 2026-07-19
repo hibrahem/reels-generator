@@ -45,11 +45,15 @@ class ReelOut(BaseModel):
     mode: str | None
     output_filename: str
     stages: dict[str, bool]
+    # mtime of the rendered file the media endpoint serves; the UI appends it to the media URL
+    # so a re-rendered reel gets a fresh URL instead of the browser's cached copy.
+    rendered_at: float | None
 
     @classmethod
     def of(cls, reel: Reel, output_dir: Path) -> ReelOut:
         c = reel.candidate
         packaged = (output_dir / reel.output_filename()).exists()
+        rendered = output_dir / reel.output_filename() if packaged else reel.final_path
         return cls(
             index=reel.index,
             start=c.time_range.start,
@@ -63,6 +67,9 @@ class ReelOut(BaseModel):
             visual_dependent=c.visual_dependent,
             mode=reel.mode.value if reel.mode else None,
             output_filename=reel.output_filename(),
+            rendered_at=rendered.stat().st_mtime
+            if rendered is not None and rendered.exists()
+            else None,
             stages={
                 "plan-layout": reel.layout is not None,
                 "cut": reel.cut_path is not None,

@@ -156,7 +156,10 @@ export function ReelInspector({
               {showFinished ? "Hide reel" : "Preview reel"}
             </Button>
             <Button asChild size="sm" variant="secondary">
-              <a href={reelMediaUrl(videoId, reel.index)} download={reel.output_filename}>
+              <a
+                href={reelMediaUrl(videoId, reel.index, reel.rendered_at)}
+                download={reel.output_filename}
+              >
                 <Download />
                 Download
               </a>
@@ -164,7 +167,7 @@ export function ReelInspector({
           </div>
           {showFinished && (
             <video
-              src={reelMediaUrl(videoId, reel.index)}
+              src={reelMediaUrl(videoId, reel.index, reel.rendered_at)}
               controls
               className="mt-3 w-full rounded-lg border border-border bg-black"
               style={{ maxHeight: 480 }}

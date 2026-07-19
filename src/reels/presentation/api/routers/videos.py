@@ -30,6 +30,12 @@ def _video_mime(suffix: str) -> str:
     )
 
 
+# Media files are replaced in place when a stage re-runs. Without this directive browsers apply
+# heuristic freshness and keep serving the old bytes for days — a re-rendered reel then looks
+# like it produced nothing. no-cache forces revalidation; the ETag keeps unchanged files at 304.
+_REVALIDATE = {"Cache-Control": "no-cache"}
+
+
 @router.get("/videos", response_model=list[VideoSummaryOut])
 def list_videos(state: StateDep) -> list[VideoSummaryOut]:
     c = state.container
@@ -132,9 +138,13 @@ def get_media(video_id: str, state: StateDep) -> FileResponse:
     # Prefer the browser-friendly preview proxy (H.264+AAC) if it's been generated.
     preview = manifest.source.working_dir / "preview.mp4"
     if preview.exists():
-        return FileResponse(preview, media_type="video/mp4")
+        return FileResponse(preview, media_type="video/mp4", headers=_REVALIDATE)
     # FileResponse honors the Range header (206), so the player can seek.
-    return FileResponse(manifest.source.path, media_type=_video_mime(manifest.source.path.suffix))
+    return FileResponse(
+        manifest.source.path,
+        media_type=_video_mime(manifest.source.path.suffix),
+        headers=_REVALIDATE,
+    )
 
 
 @router.get("/videos/{video_id}/poster")
@@ -154,7 +164,7 @@ def get_poster(video_id: str, state: StateDep) -> FileResponse:
             build_poster(manifest.source.path, poster, at, ffmpeg_path)
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return FileResponse(poster, media_type="image/jpeg")
+    return FileResponse(poster, media_type="image/jpeg", headers=_REVALIDATE)
 
 
 @router.get("/videos/{video_id}/reels/{index}/media")
@@ -170,4 +180,4 @@ def get_reel_media(video_id: str, index: int, state: StateDep) -> FileResponse:
     path = output if output.exists() else reel.final_path
     if path is None or not path.exists():
         raise HTTPException(status_code=404, detail=f"reel {index} not rendered yet")
-    return FileResponse(path, media_type="video/mp4")
+    return FileResponse(path, media_type="video/mp4", headers=_REVALIDATE)

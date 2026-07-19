@@ -118,7 +118,7 @@ export function Dashboard({
                     className="cursor-pointer gap-1.5 p-1.5 transition hover:ring-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <video
-                      src={reelMediaUrl(videoId, reel.index)}
+                      src={reelMediaUrl(videoId, reel.index, reel.rendered_at)}
                       preload="metadata"
                       muted
                       className="aspect-[9/16] w-full rounded-md bg-black"

@@ -35,6 +35,8 @@ export type Reel = {
   visual_dependent: boolean;
   mode: string | null;
   output_filename: string;
+  /** mtime of the rendered file — appended to the media URL so re-renders bust the cache. */
+  rendered_at: number | null;
   stages: Record<ReelStage, boolean>;
 };
 
@@ -162,8 +164,10 @@ export function subscribeJob(
 
 export const mediaUrl = (id: string) => `/api/videos/${encodeURIComponent(id)}/media`;
 export const posterUrl = (id: string) => `/api/videos/${encodeURIComponent(id)}/poster`;
-export const reelMediaUrl = (id: string, index: number) =>
-  `/api/videos/${encodeURIComponent(id)}/reels/${index}/media`;
+export const reelMediaUrl = (id: string, index: number, renderedAt?: number | null) =>
+  `/api/videos/${encodeURIComponent(id)}/reels/${index}/media${
+    renderedAt != null ? `?v=${renderedAt}` : ""
+  }`;
 
 export function fmtClock(s: number): string {
   const m = Math.floor(s / 60);

@@ -53,7 +53,7 @@ export function Gallery({ onOpen }: { onOpen: (id: string) => void }) {
             <Card key={key} className="gap-2 p-2">
               <div className="relative overflow-hidden rounded-lg bg-black">
                 <video
-                  src={reelMediaUrl(videoId, reel.index)}
+                  src={reelMediaUrl(videoId, reel.index, reel.rendered_at)}
                   controls={isPlaying}
                   autoPlay={isPlaying}
                   preload="metadata"
@@ -80,7 +80,10 @@ export function Gallery({ onOpen }: { onOpen: (id: string) => void }) {
               </div>
               <div className="flex gap-2 px-1" dir="ltr">
                 <Button asChild size="sm">
-                  <a href={reelMediaUrl(videoId, reel.index)} download={reel.output_filename}>
+                  <a
+                    href={reelMediaUrl(videoId, reel.index, reel.rendered_at)}
+                    download={reel.output_filename}
+                  >
                     <Download />
                     Download
                   </a>
