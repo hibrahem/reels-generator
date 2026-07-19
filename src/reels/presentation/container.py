@@ -248,7 +248,6 @@ def _caption_style(settings: Settings) -> CaptionStyle:
         position=c.position,
         safe_margin_v=c.safe_margin_v,
         safe_margin_h=c.safe_margin_h,
-        max_words_per_line=c.max_words_per_line,
         outline=c.outline,
         shadow=c.shadow,
         play_res_x=settings.output.width,

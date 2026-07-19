@@ -38,7 +38,6 @@ captions:
   position: bottom
   safe_margin_v: 320
   safe_margin_h: 70
-  max_words_per_line: 3
   outline: 5
   shadow: 3
   bold: true
@@ -46,7 +45,7 @@ captions:
   box_color: '&H90000000'
   strip_punctuation: true
   direction: auto
-  normalize_english: true
+  normalize_english: false
 brand:
   logo_position: bottom-right
   logo_opacity: 1.0

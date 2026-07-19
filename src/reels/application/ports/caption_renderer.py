@@ -16,8 +16,19 @@ class CaptionWord:
     end: float
 
 
+@dataclass(frozen=True, slots=True)
+class CaptionLine:
+    """One caption phrase — a transcript segment's words, in spoken order.
+
+    Captions follow the transcript's natural phrasing: each segment becomes one line, and
+    the renderer may split a line that is too wide for the frame, but never merges lines.
+    """
+
+    words: tuple[CaptionWord, ...]
+
+
 class CaptionRenderer(ABC):
     @abstractmethod
-    def burn_in(self, video_in: Path, words: list[CaptionWord], out_path: Path) -> None:
+    def burn_in(self, video_in: Path, lines: list[CaptionLine], out_path: Path) -> None:
         """Render word-by-word captions over the clip, producing a new file at out_path."""
         raise NotImplementedError

@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from reels.application.ports.caption_renderer import CaptionWord
+from reels.application.ports.caption_renderer import CaptionLine, CaptionWord
 from reels.infrastructure.captions.ass_subtitle_builder import CaptionStyle, build_ass
 from reels.infrastructure.config.settings import load_settings
 
@@ -22,11 +22,13 @@ from tricky_lines import TRICKY_LINES  # noqa: E402
 _WORD_SECONDS = 0.6
 
 
-def _words(text: str) -> list[CaptionWord]:
-    return [
-        CaptionWord(w, i * _WORD_SECONDS, (i + 1) * _WORD_SECONDS)
-        for i, w in enumerate(text.split())
-    ]
+def _line(text: str) -> CaptionLine:
+    return CaptionLine(
+        words=tuple(
+            CaptionWord(w, i * _WORD_SECONDS, (i + 1) * _WORD_SECONDS)
+            for i, w in enumerate(text.split())
+        )
+    )
 
 
 def _style(settings) -> CaptionStyle:
@@ -40,7 +42,6 @@ def _style(settings) -> CaptionStyle:
         position="center",  # center on the harness background for easy viewing
         safe_margin_v=c.safe_margin_v,
         safe_margin_h=c.safe_margin_h,
-        max_words_per_line=c.max_words_per_line,
         outline=c.outline,
         shadow=c.shadow,
         play_res_x=settings.output.width,
@@ -61,10 +62,10 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for line in TRICKY_LINES:
-        words = _words(line.text)
+        caption_line = _line(line.text)
         ass_path = out_dir / f"{line.label}.ass"
-        ass_path.write_text(build_ass(words, style), encoding="utf-8")
-        mid = max(0.3, len(words) * _WORD_SECONDS / 2)
+        ass_path.write_text(build_ass([caption_line], style), encoding="utf-8")
+        mid = max(0.3, len(caption_line.words) * _WORD_SECONDS / 2)
         png = out_dir / f"{line.label}.png"
         vf = f"subtitles={ass_path}:fontsdir={fonts_dir}"
         subprocess.run(

@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from reels.application.ports.caption_renderer import CaptionRenderer, CaptionWord
+from reels.application.ports.caption_renderer import CaptionLine, CaptionRenderer
 from reels.application.ports.video_editor import RenderSpec
 
 from .ass_subtitle_builder import CaptionStyle, build_ass
@@ -36,10 +36,10 @@ class LibassCaptionRenderer(CaptionRenderer):
         self._spec = spec
         self._ffmpeg = ffmpeg_path or shutil.which("ffmpeg") or "ffmpeg"
 
-    def burn_in(self, video_in: Path, words: list[CaptionWord], out_path: Path) -> None:
+    def burn_in(self, video_in: Path, lines: list[CaptionLine], out_path: Path) -> None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         ass_path = out_path.with_suffix(".ass")
-        ass_path.write_text(build_ass(words, self._style), encoding="utf-8")
+        ass_path.write_text(build_ass(lines, self._style), encoding="utf-8")
 
         vf = f"subtitles={_escape(ass_path)}:fontsdir={_escape(self._fonts_dir)}"
         cmd = [

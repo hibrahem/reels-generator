@@ -64,7 +64,6 @@ class CaptionsConfig(BaseModel):
     position: Literal["bottom", "center"] = "bottom"
     safe_margin_v: int = 260
     safe_margin_h: int = 80
-    max_words_per_line: int = 4
     outline: int = 3
     shadow: int = 0
     bold: bool = True

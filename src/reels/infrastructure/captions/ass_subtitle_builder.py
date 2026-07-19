@@ -1,6 +1,8 @@
 r"""Build an ASS subtitle document with word-by-word highlighting (spec §5.7).
 
-Each caption line is a short chunk of words rendered as ONE Dialogue event. The spoken word
+Caption lines follow the transcript's phrasing: each ``CaptionLine`` (one transcript
+segment) renders as ONE Dialogue event, split only when it pauses or cannot fit one visual
+row (we split rows ourselves — libass's own wrapping breaks RTL). The spoken word
 "lights up" (colour flip, optional size pop) at its own moment and stays lit, so an Arabic
 line sweeps right-to-left, an English line left-to-right, and a code-switched line follows
 natural bidi reading order.
@@ -34,14 +36,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from reels.application.ports.caption_renderer import CaptionWord
+from reels.application.ports.caption_renderer import CaptionLine, CaptionWord
 from reels.infrastructure.captions.text_direction import line_direction, plan_line
 
-# Start a new caption line after this many words or this long a pause.
+# Split a caption line at a pause this long — a phrase broken by silence reads as two.
 _MAX_GAP_SECONDS = 0.8
 
 # The colour flip is near-instant, like a karaoke syllable flip.
 _COLOR_FLIP_MS = 50
+
+# Rough glyph metrics for row fitting, in em (fractions of the font size), calibrated
+# against Almarai Bold renders (~0.37 em/char measured; 0.40 leaves a safety margin).
+# Captions must never rely on libass's own wrapping: wrapped RTL rows come out in the
+# wrong order and break the visual-slot mapping, so we split rows ourselves.
+_EM_PER_CHAR = 0.40
+_EM_PER_SPACE = 0.25
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,7 +63,6 @@ class CaptionStyle:
     position: str  # "bottom" | "center"
     safe_margin_v: int
     safe_margin_h: int
-    max_words_per_line: int
     outline: int
     shadow: int
     play_res_x: int
@@ -65,10 +73,10 @@ class CaptionStyle:
     direction: str = "auto"  # "auto" (per-line detection) | "rtl" | "ltr"
 
 
-def build_ass(words: list[CaptionWord], style: CaptionStyle) -> str:
+def build_ass(caption_lines: list[CaptionLine], style: CaptionStyle) -> str:
     lines = [_header(style), _styles(style), _events_header()]
 
-    for chunk in _chunk_words(words, style.max_words_per_line):
+    for chunk in _rows(caption_lines, style):
         start = chunk[0].start
         end = max(chunk[-1].end, start + 0.1)
         # word i is "active" from its start until the next word starts (last: its own end)
@@ -137,19 +145,61 @@ def _grow_transform(style: CaptionStyle, start_ms: int, end_ms: int) -> str:
     )
 
 
-def _chunk_words(words: list[CaptionWord], max_per_line: int) -> list[list[CaptionWord]]:
-    chunks: list[list[CaptionWord]] = []
+def _rows(caption_lines: list[CaptionLine], style: CaptionStyle) -> list[list[CaptionWord]]:
+    """Turn caption lines (transcript phrases) into renderable single-row word groups.
+
+    A line maps to one row when it fits the frame; otherwise it splits — first at long
+    pauses, then by estimated width into balanced consecutive rows. Lines never merge,
+    so captions keep the transcript's phrasing.
+    """
+    rows: list[list[CaptionWord]] = []
+    for line in caption_lines:
+        for phrase in _split_at_pauses(list(line.words)):
+            rows.extend(_split_to_width(phrase, style))
+    return rows
+
+
+def _split_at_pauses(words: list[CaptionWord]) -> list[list[CaptionWord]]:
+    parts: list[list[CaptionWord]] = []
     current: list[CaptionWord] = []
     for word in words:
-        if current and (
-            len(current) >= max_per_line or word.start - current[-1].end > _MAX_GAP_SECONDS
-        ):
-            chunks.append(current)
+        if current and word.start - current[-1].end > _MAX_GAP_SECONDS:
+            parts.append(current)
             current = []
         current.append(word)
     if current:
-        chunks.append(current)
-    return chunks
+        parts.append(current)
+    return parts
+
+
+def _split_to_width(words: list[CaptionWord], style: CaptionStyle) -> list[list[CaptionWord]]:
+    """Split a phrase into balanced rows that each fit the usable frame width."""
+    usable = style.play_res_x - 2 * style.safe_margin_h
+    widths = [_estimated_width(w.text, style) for w in words]
+    space = _EM_PER_SPACE * style.active_font_size
+    total = sum(widths) + space * max(0, len(words) - 1)
+    row_count = max(1, -(-round(total) // usable))  # ceil
+    if row_count == 1:
+        return [words]
+    # balanced partition: break after the word that crosses each i/row_count width mark
+    rows: list[list[CaptionWord]] = []
+    current: list[CaptionWord] = []
+    cum = 0.0
+    threshold = total / row_count
+    for word, width in zip(words, widths, strict=True):
+        current.append(word)
+        cum += width + space
+        if cum >= threshold * len(rows) + threshold and len(rows) < row_count - 1:
+            rows.append(current)
+            current = []
+    if current:
+        rows.append(current)
+    return rows
+
+
+def _estimated_width(text: str, style: CaptionStyle) -> float:
+    """Rough pixel width of a word at its largest (popped) size, plus its outline."""
+    return len(text) * _EM_PER_CHAR * style.active_font_size + 2 * style.outline
 
 
 def _header(style: CaptionStyle) -> str:
