@@ -45,7 +45,7 @@ captions:
   box: false
   box_color: '&H90000000'
   strip_punctuation: true
-  reverse_word_order: false
+  direction: auto
   normalize_english: true
 brand:
   logo_position: bottom-right

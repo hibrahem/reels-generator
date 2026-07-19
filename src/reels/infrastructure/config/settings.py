@@ -71,7 +71,9 @@ class CaptionsConfig(BaseModel):
     box: bool = True  # draw a translucent background box behind the text
     box_color: str = "&H90000000"  # box colour (AABBGGRR; AA=90 ≈ 56% opaque black)
     strip_punctuation: bool = True  # drop punctuation (cleaner Arabic captions, avoids bidi noise)
-    reverse_word_order: bool = False  # flip per-line word order (first-spoken word on the left)
+    # Caption paragraph direction: "auto" detects per line (first strong character);
+    # "rtl"/"ltr" force the run order for mixed Arabic/English lines.
+    direction: Literal["auto", "rtl", "ltr"] = "auto"
     # LLM-convert transliterated English terms to Latin (e.g. كوبلينج→Coupling)
     normalize_english: bool = False
 
