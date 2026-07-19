@@ -1,69 +1,56 @@
-# Reels Pipeline configuration.
-# Secrets (API keys) are NEVER stored here — set them via environment variables:
-#   OPENAI_API_KEY   (when selection.provider = openai)
-#   ANTHROPIC_API_KEY (when selection.provider = claude)
-
 paths:
-  input_dir: ./input          # folder of long-form source course videos
-  output_dir: ./output        # finished reels + sidecar metadata land here
-  work_dir: ./work            # per-video working dirs (transcripts, manifests, intermediates)
-  intro: null                 # optional path to an intro clip (mp4) — wired at brand stage
-  outro: null                 # optional path to an outro clip (mp4)
-  logo: null                  # optional path to a logo overlay (png with alpha)
-  font: ./assets/fonts/Almarai-Bold.ttf  # bold modern sans-serif Arabic for caption burn-in
-  ffmpeg: ./vendor/ffmpeg/bin/ffmpeg  # libass-enabled ffmpeg (system brew build lacks libass)
-
+  input_dir: input
+  output_dir: output
+  work_dir: work
+  intro: null
+  outro: assets/outro.mp4
+  ending_sound: assets/Riser.wav
+  logo: null
+  font: assets/fonts/Almarai-Bold.ttf
+  ffmpeg: vendor/ffmpeg/bin/ffmpeg
 transcription:
-  backend: faster-whisper     # faster-whisper | whisperx
-  model_size: large-v3        # Arabic accuracy degrades noticeably on smaller models
-  device: auto                # auto | cpu | cuda  (Apple Silicon uses CPU via CTranslate2)
-  compute_type: auto          # auto | int8 | int8_float16 | float16 | float32
-  language: ar                # source language hint
+  backend: faster-whisper
+  model_size: large-v3
+  device: auto
+  compute_type: auto
+  language: ar
   beam_size: 5
-
 selection:
-  provider: deepseek          # openai | deepseek | claude  (openai & deepseek share one adapter)
-  model: deepseek-chat        # exact API model id; set to whatever your account exposes
-  # base_url: https://api.deepseek.com   # optional override (defaults per provider)
-  # api_key_env: DEEPSEEK_API_KEY        # optional override of which env var holds the key
-  temperature: 0.0            # deterministic selection (reduces run-to-run variance)
-  min_clip_seconds: 15
-  max_clip_seconds: 90
-  max_retries: 1              # retry once on malformed JSON
-  # The API key is read from the environment (DEEPSEEK_API_KEY here) — see .env.example.
-  # You can also override model/base_url via env: REELS_SELECTION_MODEL, REELS_SELECTION_BASE_URL.
-
+  provider: deepseek
+  model: deepseek-chat
+  base_url: null
+  api_key_env: null
+  temperature: 0.0
+  min_clip_seconds: 15.0
+  max_clip_seconds: 90.0
+  max_retries: 1
 layout:
-  mode_b_split_ratio: 0.5     # MODE B: fraction of vertical canvas given to slides (top)
+  mode_b_split_ratio: 0.5
   detection_sample_interval_seconds: 2.0
-  default_fallback_crop: right # right | center | left — used when presenter detection fails
-  presenter_anchor: right     # source layout: presenter on the right side of the frame
-
+  default_fallback_crop: right
+  presenter_anchor: right
 captions:
-  font_family: Almarai      # must match the family name of paths.font
+  font_family: Almarai
   base_font_size: 100
-  active_font_size: 108
-  base_color: "&H00FFFFFF"    # white (unsung word)
-  active_color: "&H00FFFFFF"  # white too — uniform look like the reference (set a colour for a pop)
-  position: bottom            # bottom | center
-  safe_margin_v: 320          # px from bottom edge (sits in the lower third)
-  safe_margin_h: 70           # px from left/right edges
+  active_font_size: 105
+  base_color: '&H00FFFFFF'
+  active_color: '&H0009D6D8'
+  position: bottom
+  safe_margin_v: 320
+  safe_margin_h: 70
   max_words_per_line: 3
-  outline: 5                  # black outline so white text reads on any background
-  shadow: 3                   # soft drop shadow
+  outline: 5
+  shadow: 3
   bold: true
-  box: false                  # no background box (clean look like the reference)
-  box_color: "&H90000000"     # AABBGGRR — used only when box: true
-  strip_punctuation: true     # drop . , ? ! etc. for clean Arabic captions (avoids bidi noise)
-  reverse_word_order: true    # flip per-line word order (first-spoken word appears on the left)
-  normalize_english: true     # convert transliterated English terms to Latin (كوبلينج→Coupling) via the LLM
-
+  box: false
+  box_color: '&H90000000'
+  strip_punctuation: true
+  reverse_word_order: false
+  normalize_english: true
 brand:
-  logo_position: bottom-right   # bottom-right|bottom-left|top-right|top-left|bottom-center
+  logo_position: bottom-right
   logo_opacity: 1.0
-  logo_width_ratio: 0.18        # logo width as a fraction of the 1080px frame
-  # intro/outro/logo file paths live under paths: above (null = skipped)
-
+  logo_width_ratio: 0.18
 output:
   width: 1080
   height: 1920
