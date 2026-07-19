@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Eye, Layers, Play } from "lucide-react";
+import { ArrowLeft, Play } from "lucide-react";
 import {
   api,
   fmtClock,
   isActiveJob,
   mediaUrl,
-  STAGES,
   type Reel,
   type ReelStage,
   type VideoDetail as VideoDetailData,
 } from "../lib/api";
 import { Button } from "@/components/ui/button";
+import { PipelineStepper } from "./PipelineStepper";
 import { ReelCard } from "./ReelCard";
 import { ReelInspector, type ReelEditForm } from "./ReelInspector";
 import { TranscriptView } from "./TranscriptView";
@@ -27,7 +27,16 @@ import { Timeline } from "./Timeline";
  * start/end setters. Esc (or "All reels") deselects. Below lg the inspector opens as
  * an overlay panel so small screens keep a dedicated editing surface.
  */
-export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) {
+export function VideoDetail({
+  id,
+  onBack,
+  onExport,
+}: {
+  id: string;
+  onBack: () => void;
+  /** Jump to the Gallery once every reel is rendered (stepper's Export action). */
+  onExport?: () => void;
+}) {
   const qc = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const playUntilRef = useRef<number | null>(null); // auto-stop boundary for span playback
@@ -37,8 +46,6 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
   const [bottomTab, setBottomTab] = useState<"transcript" | "summary">("transcript");
   const [jobId, setJobId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [fromStage, setFromStage] = useState("plan-layout");
-  const [toStage, setToStage] = useState("package");
 
   // Master-detail: which reel the inspector edits, and the shared edit form the
   // trim strip / transcript / inspector all read and write.
@@ -204,8 +211,6 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
 
   const fieldCls =
     "w-full rounded-lg border border-input bg-background px-2 py-1 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
-  const selectClass =
-    "h-8 rounded-lg border border-input bg-background px-2 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
 
   return (
     <div>
@@ -224,66 +229,14 @@ export function VideoDetail({ id, onBack }: { id: string; onBack: () => void }) 
         </span>
       </div>
 
-      {/* Pipeline controls (job trigger) */}
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
-        <span className="font-heading text-xs font-semibold uppercase tracking-wider text-primary">
-          Pipeline
-        </span>
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            from
-            <select
-              value={fromStage}
-              onChange={(e) => setFromStage(e.target.value)}
-              className={selectClass}
-            >
-              {STAGES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            to
-            <select
-              value={toStage}
-              onChange={(e) => setToStage(e.target.value)}
-              className={selectClass}
-            >
-              {STAGES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <Button
-          onClick={() => start(api.runPipeline(id, { from_stage: fromStage, to_stage: toStage }))}
-        >
-          <Play />
-          Run
-        </Button>
-        <div className="mx-1 h-5 w-px bg-border" />
-        <Button
-          variant="secondary"
-          onClick={() =>
-            start(api.runPipeline(id, { from_stage: "plan-layout", to_stage: "package" }))
-          }
-        >
-          <Layers />
-          Process all reels
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => start(api.makePreview(id))}
-          title="Transcode a browser-friendly preview (audio in Chrome)"
-        >
-          <Eye />
-          Generate preview
-        </Button>
-      </div>
+      {/* Guided pipeline flow (job trigger) */}
+      <PipelineStepper
+        detail={d}
+        busy={running}
+        onRun={(from, to) => start(api.runPipeline(id, { from_stage: from, to_stage: to }))}
+        onPreview={() => start(api.makePreview(id))}
+        onExport={onExport}
+      />
 
       {shownJobId && (
         <div className="mb-4">

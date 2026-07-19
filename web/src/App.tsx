@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Clapperboard,
+  Home,
   Loader2,
   MicOff,
   MonitorPlay,
@@ -9,6 +10,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { api, isActiveJob, type JobSummary } from "./lib/api";
+import { Dashboard } from "./components/Dashboard";
 import { Library } from "./components/Library";
 import { Doctor } from "./components/Doctor";
 import { VideoDetail } from "./components/VideoDetail";
@@ -17,9 +19,10 @@ import { Gallery } from "./components/Gallery";
 import { SilenceRemover } from "./components/SilenceRemover";
 import { Logo } from "./components/Logo";
 
-type Tab = "library" | "gallery" | "silence" | "config" | "health";
+type Tab = "home" | "library" | "gallery" | "silence" | "config" | "health";
 
 const MAIN_TABS: { id: Tab; label: string; icon: typeof Clapperboard }[] = [
+  { id: "home", label: "Home", icon: Home },
   { id: "library", label: "Library", icon: Clapperboard },
   { id: "gallery", label: "Gallery", icon: MonitorPlay },
   { id: "silence", label: "Silence", icon: MicOff },
@@ -31,7 +34,7 @@ const SYSTEM_TABS: { id: Tab; label: string; icon: typeof Clapperboard }[] = [
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("library");
+  const [tab, setTab] = useState<Tab>("home");
   const [openId, setOpenId] = useState<string | null>(null);
 
   // App-wide awareness of running work — polled so jobs started on any screen
@@ -135,11 +138,23 @@ export default function App() {
 
       <main className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-6 py-8">
+          {tab === "home" && (
+            <Dashboard
+              onOpenVideo={openVideo}
+              onGoLibrary={() => setTab("library")}
+              onGoGallery={() => setTab("gallery")}
+            />
+          )}
           {tab === "library" && !openId && (
             <Library onOpen={setOpenId} activeVideoIds={activeVideoIds} />
           )}
           {tab === "library" && openId && (
-            <VideoDetail key={openId} id={openId} onBack={() => setOpenId(null)} />
+            <VideoDetail
+              key={openId}
+              id={openId}
+              onBack={() => setOpenId(null)}
+              onExport={() => setTab("gallery")}
+            />
           )}
           {tab === "gallery" && <Gallery onOpen={openVideo} />}
           {tab === "silence" && <SilenceRemover />}
