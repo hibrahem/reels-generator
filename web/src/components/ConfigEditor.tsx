@@ -150,10 +150,10 @@ export function ConfigEditor() {
         ))}
       </div>
 
-      {/* Save bar — slides in only when there are unsaved edits */}
+      {/* Save bar — floats at the bottom of the scroll area only while there are unsaved edits */}
       {(dirty || saved) && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 backdrop-blur">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-3">
+        <div className="sticky bottom-4 z-20 mt-6 rounded-xl border border-border bg-card/95 shadow-lg backdrop-blur">
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
             <span className="text-sm text-muted-foreground">
               {saved ? (
                 <span className="text-emerald-400">Saved ✓</span>
